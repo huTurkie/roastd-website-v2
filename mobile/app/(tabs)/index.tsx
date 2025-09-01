@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { pickImage, uploadPhoto, createRoastSession, generateLinkCode } from '../../lib/uploadHelpers';
+import { pickImage, uploadPhoto, createRoastSession, generateLinkCode, updateRoastPrompt } from '../../lib/uploadHelpers';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -112,10 +112,18 @@ const ShareableView = React.forwardRef<ViewShot, ShareableViewProps>(
   }
 );
 
+const prompts = [
+  'roast this photo ',
+  'Make me look cooler ',
+  'Turn me into a superhero ',
+  'Make this funnier ',
+  'Roast my outfit',
+];
+
 function HomeScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [roastLink, setRoastLink] = useState('');
-  const [currentPrompt, setCurrentPrompt] = useState('roast this photo ');
+  const [currentPrompt, setCurrentPrompt] = useState(prompts[0]);
   const [promptIndex, setPromptIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
@@ -129,14 +137,6 @@ function HomeScreen() {
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
-
-  const prompts = [
-    'roast this photo ',
-    'Make me look cooler ',
-    'Turn me into a superhero ',
-    'Make this funnier ',
-    'Roast my outfit',
-  ];
 
   const backgroundOptions: Array<BackgroundOption> = [
     { type: 'solid', value: 'rgba(0, 0, 0, 0.2)' },
@@ -221,10 +221,25 @@ function HomeScreen() {
     rotate();
   }, []);
 
-  const handleDicePress = () => {
-    const nextIndex = (promptIndex + 1) % prompts.length;
-    setPromptIndex(nextIndex);
-    setCurrentPrompt(prompts[nextIndex]);
+  const handleDicePress = async () => {
+    const currentIndex = prompts.indexOf(currentPrompt);
+    const nextIndex = (currentIndex + 1) % prompts.length;
+    const newPrompt = prompts[nextIndex];
+    setCurrentPrompt(newPrompt);
+
+    // If a photo has already been uploaded, update its prompt in the database
+    if (roastLink) {
+      try {
+        const linkCode = roastLink.split('code=')[1];
+        if (linkCode) {
+          console.log(`Dice pressed. Updating prompt to "${newPrompt}" for link code: ${linkCode}`);
+          await updateRoastPrompt(linkCode, newPrompt);
+        }
+      } catch (error) {
+        console.error('Failed to update prompt on dice press:', error);
+        // Optionally, inform the user that the update failed
+      }
+    }
   };
 
   const handleShare = async () => {
@@ -315,8 +330,14 @@ function HomeScreen() {
 
   const handleCopyLink = async () => {
     if (roastLink) {
-      await Clipboard.setStringAsync(roastLink);
-      Alert.alert('Copied!', 'Your roast link has been copied.');
+      try {
+        await Clipboard.setStringAsync(roastLink);
+        Alert.alert('Copied!', 'Your roast link has been copied with the current prompt.');
+      } catch (error) {
+        console.error('Error in handleCopyLink:', error);
+        await Clipboard.setStringAsync(roastLink);
+        Alert.alert('Copied!', 'Your roast link has been copied.');
+      }
     } else {
       Alert.alert('No Link!', 'Please upload a photo to generate a link first.');
     }

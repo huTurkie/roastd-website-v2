@@ -123,3 +123,57 @@ export async function pickImage(): Promise<string | null> {
     return null;
   }
 }
+
+// Update roast session prompt by link code
+export async function updateRoastPrompt(
+  linkCode: string,
+  newPrompt: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('roast_sessions')
+      .update({ roast_prompt: newPrompt })
+      .eq('link_code', linkCode);
+
+    if (error) {
+      console.error('Error updating roast prompt:', error);
+      return false;
+    }
+
+    console.log('✅ Roast prompt updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating roast prompt:', error);
+    return false;
+  }
+}
+
+// Set updated prompt for a roast session by link code
+export async function setUpdatedPrompt(
+  linkCode: string,
+  newPrompt: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('roast_sessions')
+      .update({ updated_prompt: newPrompt })
+      .eq('link_code', linkCode)
+      .select();
+
+    if (error) {
+      console.error('Error setting updated_prompt:', error);
+      return false;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('No rows were updated - link_code might not exist:', linkCode);
+      return false;
+    }
+
+    console.log('✅ Updated prompt set successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in setUpdatedPrompt:', error);
+    return false;
+  }
+}

@@ -395,7 +395,7 @@
                 </div>
             </div>
 
-            <div class="toast-heading">
+            <div class="toast-heading" id="toast-heading">
                 roast this pic 😂🔥
             </div>
             
@@ -489,24 +489,34 @@
             }
 
             // Fetch the roast session from Supabase
+            console.log('Fetching roast session with link code:', linkCode);
             const { data, error } = await supabaseClient
                 .from('roast_sessions')
-                .select('session_id, original_photo_url, initial_prompt')
+                .select('session_id, original_photo_url, roast_prompt')
                 .eq('link_code', linkCode)
                 .single();
 
-            console.log('Supabase response:', { data, error }); 
+            console.log('Supabase response:', { data, error });
+            console.log('Fetched data:', data);
 
             if (error || !data) {
                 console.error('Error fetching roast session:', error);
-                loadingSpinner.textContent = 'Sorry, this roast link is invalid or has expired.';
+                loadingSpinner.textContent = 'Error loading roast session.';
                 return;
             }
 
-            // Display the image and set the initial prompt
+            // Display the image and set the prompt
             currentSessionId = data.session_id;
             roastImage.src = data.original_photo_url;
-            document.querySelector('.prompt-input').value = data.initial_prompt || '';
+            
+            const toastHeading = document.getElementById('toast-heading');
+            console.log('Toast heading element:', toastHeading);
+            console.log('Setting heading to:', data.roast_prompt);
+            toastHeading.textContent = data.roast_prompt;
+            console.log('Heading updated to:', toastHeading.textContent);
+
+            document.querySelector('.prompt-input').value = data.roast_prompt || '';
+            
             roastImage.style.display = 'block';
             loadingSpinner.style.display = 'none';
         });
