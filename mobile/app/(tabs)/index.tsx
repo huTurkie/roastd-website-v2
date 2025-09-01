@@ -113,11 +113,32 @@ const ShareableView = React.forwardRef<ViewShot, ShareableViewProps>(
 );
 
 const prompts = [
-  'roast this photo ',
-  'Make me look cooler ',
-  'Turn me into a superhero ',
-  'Make this funnier ',
-  'Roast my outfit',
+  'Roast this pic 😂',
+  'Turn me into a cartoon character 🎨',
+  'Transform me into a meme character 😂',
+  'Make me look cooler 😎',
+  'Make me eat your favorite food 🍔',
+  'Turn me into your favorite superhero 🦸',
+  'Swap my outfit with your favorite famous person 👔',
+  'Put me in a movie poster 🎬',
+  'Turn me into an anime character 🎌',
+  'Make me a celebrity for a day 🌟',
+  'Make me wear your favorite outfit 👕',
+  'Put me in your favorite country/city 🌍',
+  'Turn me into a villain 😈',
+  'Make me an animal / mythical creature 🐉',
+  'Turn me into a Pixar character 🎥',
+  'Turn me into a 3D style character 🖥️',
+  'Put me in a famous painting 🖼️',
+  'Put me in outer space 🚀',
+  'Put me in a fantasy world 🏰',
+  'Turn me into a robot / cyborg 🤖',
+  'Make me a historical figure 👑',
+  'Put me in a sports scene ⚽',
+  'Make me tiny or giant in a scene 🔍',
+  'Add a magical effect around me ✨',
+  'Make this funnier 😅',
+  'Roast my outfit 🔥',
 ];
 
 function HomeScreen() {
