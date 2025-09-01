@@ -10,21 +10,19 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.roastd",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": [
-          "instagram-stories",
-          "instagram-stories"
-        ],
-        "ITSAppUsesNonExemptEncryption": false
-      },
-      "bundleIdentifier": "com.hass.rostd"
+        "LSApplicationQueriesSchemes": ["instagram-stories"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.roastd",
+      "queries": []
     },
     "web": {
       "bundler": "metro",
