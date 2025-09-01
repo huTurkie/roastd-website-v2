@@ -165,12 +165,39 @@ Generated images stored in Supabase → delivered to User 1 inbox.
  
  
 
+7. Detailed AI Interaction Flow
+
+This section details the end-to-end user journey involving the AI image generation.
+
+1.  **Creation (User 1 - Mobile App)**:
+    *   User 1 uploads a photo and selects a prompt (e.g., "Roast this photo").
+    *   The app generates a unique URL (e.g., `roastd.link/unique-pic-id`) and copies it to the clipboard.
+    *   User 1 shares the captured image (with the prompt overlay) directly to their Instagram Story, then pastes the link from their clipboard as a sticker.
+
+2.  **Interaction (User 2 - Web)**:
+    *   User 2 sees the story and clicks the link.
+    *   They are taken to the web page (`roastd.link/unique-pic-id`), which displays the same photo and prompt.
+    *   User 2 enters their own roast/prompt and submits it.
+
+3.  **Processing (Backend - Supabase & AI)**:
+    *   The submission from User 2 triggers a Supabase function.
+    *   This function sends the original image and User 2's prompt to the 'NanoBanana' AI service.
+    *   The AI service transforms the image based on the prompt and returns the new, generated image.
+
+4.  **Delivery (User 1 - Mobile App)**:
+    *   The AI-generated image is saved to Supabase and appears in User 1's in-app inbox.
+
+5.  **Completion (User 1 - Mobile App)**:
+    *   User 1 can view the generated image in their inbox and share it back to their own Instagram Story, completing the loop.
+
+ 
+ 
+
 Folder Structure Suggestion: 
 
 /roastit 
   /mobile      → React Native app (Expo SDK 53) 
   /web         → React web client (Vercel) 
- 
 
 Mobile and web communicate only via Supabase backend (DB + Storage + AI triggers). 
 

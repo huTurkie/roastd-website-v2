@@ -362,16 +362,19 @@ function HomeScreen() {
 
       const publicUrl = urlData.publicUrl;
 
+      // IMPORTANT: Replace YOUR_LOCAL_IP with your computer's local IP address.
+      const localRoastLink = `http://YOUR_LOCAL_IP:8000/unique-pic-id/index.html?code=${linkCode}`;
+
       Alert.alert(
         'Upload Successful!',
-        `Your roast link is ready: https://roastd.link/${linkCode}\n\nYour photo is available at: ${publicUrl}`
+        `Your local roast link is ready: ${localRoastLink}`
       );
 
       console.log(` Roast session created! Link code: ${linkCode}`);
       console.log(` Public photo URL: ${publicUrl}`);
 
       setUploadedImageUri(uri);
-      setRoastLink(`https://roastd.link/${linkCode}`);
+      setRoastLink(localRoastLink);
       setIsUploading(false);
     } catch (error) {
       console.error('Upload process failed:', error);
@@ -461,11 +464,7 @@ function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.dotsContainer}>
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </View>
+          <View style={styles.dotsContainer} />
 
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Step 1: Upload a photo</Text>
@@ -570,7 +569,7 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 350,
+    minHeight: 380, // Increased height
     position: 'relative',
   },
   uploadedImage: {
@@ -628,22 +627,12 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 10, // Adjusted from 20 to reduce space
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ddd',
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: '#007bff',
+    marginVertical: 10,
   },
   stepContainer: {
-    marginVertical: 8,
+    width: '100%',
+    paddingHorizontal: 20,
+    marginVertical: 10, // Reduced vertical margin
   },
   stepTitle: {
     fontSize: 16,
