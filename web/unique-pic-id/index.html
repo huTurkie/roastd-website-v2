@@ -525,7 +525,7 @@
             const promptText = promptInput.value.trim();
 
             if (!promptText) {
-                alert('Please enter a roast prompt first!');
+                alert('Please enter a prompt first!');
                 return;
             }
 
@@ -538,25 +538,26 @@
             this.disabled = true;
             this.textContent = 'Sending...';
 
-            // Insert the new roast submission into the database
-            const { error } = await supabaseClient
-                .from('roast_submissions')
-                .insert({ 
-                    session_id: currentSessionId, 
-                    submitted_prompt: promptText 
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('nano-banana', {
+                    body: { 
+                        sessionId: currentSessionId,
+                        prompt: promptText
+                    },
                 });
 
-            if (error) {
-                console.error('Error submitting roast:', error);
-                alert('There was an error submitting your roast. Please try again.');
-                this.disabled = false;
-                this.textContent = 'Send';
-            } else {
-                alert('Roast submitted successfully! 🔥');
+                if (error) throw error;
+
+                alert('Sent to inbox! 💌');
                 promptInput.value = '';
                 this.textContent = 'Sent! ✔️';
-                // Optionally, you could hide the input form now
                 document.querySelector('.input-section').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error sending to inbox:', error);
+                alert('There was an error sending your message. Please try again.');
+                this.disabled = false;
+                this.textContent = 'Send';
             }
         });
 
