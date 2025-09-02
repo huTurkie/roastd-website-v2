@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 0, // Adjusted from 20 to move content up
+    paddingTop: Platform.OS === 'ios' ? 0 : 0, // Remove extra iOS padding
   },
   cardContainer: {
     position: 'relative',

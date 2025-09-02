@@ -5,34 +5,39 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
-Deno.serve(async (req) => {
+console.log('nano-banana function started')
+
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Use service role key to bypass RLS for testing
+    console.log('Processing request...')
+    
+    // Initialize Supabase client with service role key
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Parse request body
     const { sessionId, prompt } = await req.json()
+    console.log('Request data:', { sessionId, prompt })
 
     if (!sessionId || !prompt) {
       throw new Error('Session ID and prompt are required.')
     }
 
-    console.log('Received request:', { sessionId, prompt })
-
     // 1. Get session details
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('roast_sessions')
-      .select('original_photo_url')
+      .select('original_photo_url, link_code')
       .eq('session_id', sessionId)
       .single()
 
@@ -41,17 +46,21 @@ Deno.serve(async (req) => {
       throw sessionError
     }
 
-    console.log('Session data:', sessionData)
+    console.log('Session data retrieved:', sessionData)
 
-    // 2. ** GOOGLE NANO BANANA MODEL INTEGRATION **
-    // TODO: Integrate actual AI image generation service
-    
-    // 3. Save the roast submission
+    // --- TEMPORARY DEBUGGING: Return user's original photo instead of generating new image ---
+    console.log('--- SKIPPING GEMINI API: Using user original photo ---')
+    const generatedImageUrl = sessionData.original_photo_url
+    console.log('Using original photo URL:', generatedImageUrl)
+    // --- END TEMPORARY DEBUGGING ---
+
+    // 3. Insert the roast submission with original image URL
     const { data: submissionData, error: submissionError } = await supabaseClient
       .from('roast_submissions')
       .insert({
         session_id: sessionId,
-        roast_text: prompt
+        roast_text: prompt,
+        ai_generated_image_url: generatedImageUrl
       })
       .select('submission_id')
       .single()
@@ -61,18 +70,61 @@ Deno.serve(async (req) => {
       throw submissionError
     }
 
-    console.log('Submission saved:', submissionData)
+    console.log('Roast submission created:', submissionData)
+
+    // 4. Create an inbox entry (using link_code as identifier)
+    console.log('--- DEBUGGING INBOX INSERTION ---')
+    console.log('Session link_code:', sessionData.link_code)
+    console.log('Attempting to insert inbox entry with data:', {
+      user_id: sessionData.link_code,
+      prompt: prompt,
+      original_photo_url: sessionData.original_photo_url,
+      generated_photo_url: generatedImageUrl,
+      roast: prompt
+    })
+    
+    const { data: inboxData, error: inboxError } = await supabaseClient
+      .from('inbox')
+      .insert({
+        user_id: sessionData.link_code,
+        prompt: prompt,
+        original_photo_url: sessionData.original_photo_url,
+        generated_photo_url: generatedImageUrl,
+        roast: prompt
+      })
+      .select('id')
+      .single()
+
+    console.log('Inbox insertion result - Data:', inboxData)
+    console.log('Inbox insertion result - Error:', inboxError)
+    
+    if (inboxError) {
+      console.error('Failed to create inbox entry:', inboxError)
+      console.error('Inbox error details:', JSON.stringify(inboxError, null, 2))
+      // Don't throw error, just log it - we still want to return the roast
+    } else {
+      console.log('Inbox entry created successfully:', inboxData)
+    }
+    console.log('--- END INBOX DEBUGGING ---')
 
     return new Response(JSON.stringify({ 
       success: true, 
-      submission_id: submissionData.submission_id 
+      submission_id: submissionData.submission_id,
+      message_id: inboxData?.id || null,
+      ai_image_url: generatedImageUrl,
+      original_roast: prompt
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
+
   } catch (error) {
-    console.error('Error in nano-banana function:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Function error:', error)
+    console.error('Stack trace:', error.stack)
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.stack 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })

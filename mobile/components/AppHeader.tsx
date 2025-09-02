@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 
@@ -11,7 +11,7 @@ export default function AppHeader({ activeTab }: AppHeaderProps) {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Ionicons name="eye-outline" size={28} color="#BDBDBD" />
@@ -31,7 +31,7 @@ export default function AppHeader({ activeTab }: AppHeaderProps) {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

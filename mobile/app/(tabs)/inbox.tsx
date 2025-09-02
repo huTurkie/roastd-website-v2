@@ -1,68 +1,95 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Switch, TouchableOpacity, FlatList, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Switch, TouchableOpacity, FlatList, Text, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '@/components/AppHeader';
+import { supabase } from '@/lib/supabase';
 
-const messages = [
-  {
-    id: '1',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '3 hours ago',
-  },
-  {
-    id: '2',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '5 hours ago',
-  },
-  {
-    id: '3',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '20 hours ago',
-  },
-  {
-    id: '4',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: 'a day ago',
-  },
-  {
-    id: '5',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: 'a day ago',
-  },
-  {
-    id: '6',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '2 days ago',
-  },
-  {
-    id: '7',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '3 days ago',
-  },
-  {
-    id: '8',
-    type: 'new',
-    title: 'New Message!',
-    timestamp: '4 days ago',
-  },
-];
+interface InboxMessage {
+  id: string;
+  prompt: string;
+  roast: string;
+  created_at: string;
+  user_id: string;
+  original_photo_url: string;
+  generated_photo_url: string;
+}
 
 export default function InboxScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const toggleSwitch = () => setNotificationsEnabled(previousState => !previousState);
 
-  const renderMessage = ({ item }) => (
-    <TouchableOpacity style={styles.messageItem}>
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inbox')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        Alert.alert('Error', 'Failed to load messages. Please try again.');
+        return;
+      }
+
+      setMessages(data || []);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      Alert.alert('Error', 'Failed to load messages. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchMessages();
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const now = new Date();
+    const messageTime = new Date(timestamp);
+    const diffInHours = Math.floor((now.getTime() - messageTime.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return 'a day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    
+    return messageTime.toLocaleDateString();
+  };
+
+  const markAsRead = async (messageId: string) => {
+    // is_read column doesn't exist in database - removing this functionality
+    return;
+  };
+
+  const handleMessagePress = (message: InboxMessage) => {
+    // TODO: Navigate to message detail screen or show roast content
+    Alert.alert(
+      'Roast Message',
+      message.roast,
+      [{ text: 'OK', style: 'default' }]
+    );
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const renderMessage = ({ item }: { item: InboxMessage }) => (
+    <TouchableOpacity 
+      style={styles.messageItem}
+      onPress={() => handleMessagePress(item)}
+    >
       <View style={styles.iconContainer}>
         <LinearGradient
           colors={['#8a3ab9', '#e95950', '#fccc63']}
@@ -77,10 +104,13 @@ export default function InboxScreen() {
         </LinearGradient>
       </View>
       <View style={styles.messageContent}>
-        <Text style={[styles.messageTitle, styles.newMessageTitle]}>
-          {item.title}
+        <Text style={styles.messageTitle}>
+          Roast Message
         </Text>
-        <Text style={styles.timestamp}>{item.timestamp}</Text>
+        <Text style={styles.messagePreview} numberOfLines={1}>
+          {item.prompt}
+        </Text>
+        <Text style={styles.timestamp}>{formatTimestamp(item.created_at)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#D3D3D3" />
     </TouchableOpacity>
@@ -102,16 +132,42 @@ export default function InboxScreen() {
     </View>
   );
 
+  const EmptyState = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="mail-outline" size={64} color="#D3D3D3" />
+      <Text style={styles.emptyTitle}>No messages yet</Text>
+      <Text style={styles.emptySubtitle}>Your roast messages will appear here</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <AppHeader activeTab="inbox" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F14060" />
+          <Text style={styles.loadingText}>Loading messages...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <ThemedView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <AppHeader activeTab="inbox" />
       <FlatList
         data={messages}
         renderItem={renderMessage}
         keyExtractor={item => item.id}
         ListHeaderComponent={ListHeader}
+        ListEmptyComponent={EmptyState}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={styles.listContentContainer}
+        contentContainerStyle={[
+          styles.listContentContainer,
+          messages.length === 0 && styles.emptyListContainer
+        ]}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
       />
       <TouchableOpacity style={styles.floatingButtonContainer}>
         <LinearGradient
@@ -123,7 +179,7 @@ export default function InboxScreen() {
           <Text style={styles.buttonText}>Who sent these?</Text>
         </LinearGradient>
       </TouchableOpacity>
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -178,10 +234,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '500',
   },
-  newMessageTitle: {
-    color: '#F14060',
-    fontWeight: 'bold',
-  },
   timestamp: {
     color: '#999',
     marginTop: 4,
@@ -216,5 +268,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
+  },
+  messagePreview: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  emptyListContainer: {
+    flexGrow: 1,
   },
 });
