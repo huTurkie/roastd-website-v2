@@ -48,6 +48,19 @@ serve(async (req) => {
 
     console.log('Session data retrieved:', sessionData)
 
+    // Update the roast session with user2's prompt
+    const { error: updateError } = await supabaseClient
+      .from('roast_sessions')
+      .update({ updated_prompt: prompt })
+      .eq('session_id', sessionId)
+
+    if (updateError) {
+      console.error('Error updating session with user2 prompt:', updateError)
+      // Don't throw error, just log it
+    } else {
+      console.log('Updated roast session with user2 prompt:', prompt)
+    }
+
     // --- TEMPORARY DEBUGGING: Return user's original photo instead of generating new image ---
     console.log('--- SKIPPING GEMINI API: Using user original photo ---')
     const generatedImageUrl = sessionData.original_photo_url

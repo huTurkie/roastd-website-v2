@@ -38,6 +38,8 @@ interface InboxMessage {
   user_id: string;
   original_photo_url: string;
   generated_photo_url: string;
+  roast_prompt?: string;
+  updated_prompt?: string;
 }
 
 interface MessageDetailModalProps {
@@ -159,7 +161,7 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
                 style={styles.promptContainer}
               >
                 <Text style={[styles.promptText, currentGradientIndex === gradients.length - 1 && styles.promptTextBlack]}>
-                  {"User 2 prompt"}
+                  {message.updated_prompt || message.roast_prompt || message.prompt || "No prompt available"}
                 </Text>
               </LinearGradient>
 

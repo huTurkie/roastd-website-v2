@@ -78,7 +78,7 @@ export default function InboxScreen() {
         generated_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png', // Use original for now
         link_code: session.link_code,
         roast_prompt: session.roast_prompt,
-        updated_prompt: session.initial_prompt
+        updated_prompt: session.updated_prompt
       }));
       
       // Always include demo message first, then add real messages
