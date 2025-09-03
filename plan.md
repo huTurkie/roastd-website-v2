@@ -80,7 +80,7 @@ Onboarding: Quick intro screens. Login/signup optional.
 
 Main Screen: Upload photo → generate roast link → copy/share button. 
 
-Inbox Screen: Shows all roast submissions + AI-generated roasted images. Option to screenshot/share funniest results. 
+Inbox Screen: Shows all roast submissions. When a user taps on a submission, it will open a detailed view displaying the AI-generated image alongside the prompt submitted by User 2. Users can then share the result. 
 
 Web App (Vercel) 
 
@@ -185,7 +185,7 @@ This section details the end-to-end user journey involving the AI image generati
     *   The AI service transforms the image based on the prompt and returns the new, generated image.
 
 4.  **Delivery (User 1 - Mobile App)**:
-    *   The AI-generated image is saved to Supabase and appears in User 1's in-app inbox.
+    *   The AI-generated image and the associated prompt from User 2 are saved to Supabase and appear in User 1's in-app inbox.
 
 5.  **Completion (User 1 - Mobile App)**:
     *   User 1 can view the generated image in their inbox and share it back to their own Instagram Story, completing the loop.

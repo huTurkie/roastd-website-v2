@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '@/components/AppHeader';
 import { supabase } from '@/lib/supabase';
+import MessageDetailModal from '@/components/MessageDetailModal';
 
 interface InboxMessage {
   id: string;
@@ -14,6 +15,9 @@ interface InboxMessage {
   user_id: string;
   original_photo_url: string;
   generated_photo_url: string;
+  link_code?: string;
+  roast_prompt?: string;
+  updated_prompt?: string;
 }
 
 export default function InboxScreen() {
@@ -21,26 +25,72 @@ export default function InboxScreen() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const toggleSwitch = () => setNotificationsEnabled(previousState => !previousState);
 
+  // Demo message that should always be present
+  const demoMessage: InboxMessage = {
+    id: 'demo-1',
+    prompt: 'Swap their outfit with someone famous 🔥',
+    roast: 'This is a demo roast message.',
+    created_at: new Date().toISOString(),
+    user_id: 'demo-user',
+    original_photo_url: 'https://placehold.co/600x400/png',
+    generated_photo_url: 'https://placehold.co/600x400/png',
+  };
+
   const fetchMessages = async () => {
     try {
+      console.log('📬 Fetching messages from Supabase...');
+
+      // Fetch all roast sessions from Supabase
       const { data, error } = await supabase
-        .from('inbox')
+        .from('roast_sessions')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching messages:', error);
         Alert.alert('Error', 'Failed to load messages. Please try again.');
+        // If there's an error, at least show the demo message
+        setMessages([demoMessage]);
         return;
       }
 
-      setMessages(data || []);
+      console.log('📬 Fetched messages from Supabase:', data?.length || 0);
+      
+      // Debug: Log the actual data structure
+      if (data && data.length > 0) {
+        console.log('🔍 First roast session data:', JSON.stringify(data[0], null, 2));
+        console.log('🔍 Available fields:', Object.keys(data[0]));
+      }
+      
+      // Map roast_sessions data to InboxMessage format
+      const mappedMessages: InboxMessage[] = (data || []).map(session => ({
+        id: session.session_id,
+        prompt: session.roast_prompt || 'New roast request',
+        roast: 'Roast pending...', // No roast_result field yet
+        created_at: session.created_at,
+        user_id: session.creator_email || 'anonymous',
+        original_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png',
+        generated_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png', // Use original for now
+        link_code: session.link_code,
+        roast_prompt: session.roast_prompt,
+        updated_prompt: session.initial_prompt
+      }));
+      
+      // Always include demo message first, then add real messages
+      const allMessages = [demoMessage, ...mappedMessages];
+      console.log('📬 Total messages (including demo):', allMessages.length);
+      
+      setMessages(allMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       Alert.alert('Error', 'Failed to load messages. Please try again.');
+      // If there's an error, at least show the demo message
+      setMessages([demoMessage]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -73,12 +123,8 @@ export default function InboxScreen() {
   };
 
   const handleMessagePress = (message: InboxMessage) => {
-    // TODO: Navigate to message detail screen or show roast content
-    Alert.alert(
-      'Roast Message',
-      message.roast,
-      [{ text: 'OK', style: 'default' }]
-    );
+    setSelectedMessage(message);
+    setModalVisible(true);
   };
 
   useEffect(() => {
@@ -92,23 +138,15 @@ export default function InboxScreen() {
     >
       <View style={styles.iconContainer}>
         <LinearGradient
-          colors={['#8a3ab9', '#e95950', '#fccc63']}
+          colors={['#FF6B6B', '#F14060']}
           style={styles.messageIcon}
         >
-          <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-            <Ionicons name="mail" size={32} color="white" />
-            <View style={{ position: 'absolute' }}>
-              <Ionicons name="heart" size={16} color="#e95950" />
-            </View>
-          </View>
+          <Ionicons name="heart-outline" size={32} color="white" />
         </LinearGradient>
       </View>
       <View style={styles.messageContent}>
         <Text style={styles.messageTitle}>
-          Roast Message
-        </Text>
-        <Text style={styles.messagePreview} numberOfLines={1}>
-          {item.prompt}
+          New Message!
         </Text>
         <Text style={styles.timestamp}>{formatTimestamp(item.created_at)}</Text>
       </View>
@@ -179,6 +217,11 @@ export default function InboxScreen() {
           <Text style={styles.buttonText}>Who sent these?</Text>
         </LinearGradient>
       </TouchableOpacity>
+      <MessageDetailModal
+        message={selectedMessage}
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
