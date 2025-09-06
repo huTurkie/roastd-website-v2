@@ -1,4 +1,4 @@
-// Simple test to isolate the 500 error issue
+// Debug the 500 error from nano-banana function
 const { createClient } = require('@supabase/supabase-js')
 
 const SUPABASE_URL = 'https://whvbxvllzrgjvurdivmh.supabase.co'
@@ -6,39 +6,33 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-async function testBasicFunction() {
-  console.log('🧪 Testing nano-banana function with valid link code...')
+async function debug500Error() {
+  console.log('🔍 Debugging 500 error...')
   
   try {
-    // Test with valid link code that exists in database
     const { data, error } = await supabase.functions.invoke('nano-banana', {
       body: { 
         link_code: 'P0uM1I2o',
-        prompt: 'Test inbox insertion debug'
+        prompt: 'Debug test'
       },
     })
 
     console.log('📋 Response data:', data)
     console.log('📋 Response error:', error)
     
-    // Try to extract more details from the error
     if (error && error.context) {
-      const response = error.context
-      console.log('📋 Response status:', response.status)
-      console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()))
-      
-      // Try to read the response body for more error details
+      console.log('📋 Response status:', error.context.status)
       try {
-        const responseText = await response.text()
+        const responseText = await error.context.text()
         console.log('📋 Response body:', responseText)
-      } catch (bodyError) {
-        console.log('📋 Could not read response body:', bodyError.message)
+      } catch (e) {
+        console.log('📋 Could not read response body')
       }
     }
     
   } catch (err) {
-    console.error('❌ Test error:', err)
+    console.error('❌ Exception:', err.message)
   }
 }
 
-testBasicFunction().catch(console.error)
+debug500Error().catch(console.error)

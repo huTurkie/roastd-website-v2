@@ -276,18 +276,72 @@ serve(async (req) => {
 
     // Insert into inbox for mobile app
     console.log('🔥 [nano-banana] STEP 16: Inserting into inbox for mobile app display');
-    const { error: inboxError } = await supabaseClient
-      .from('inbox')
-      .insert({
-        roast_session_id: sessionData.session_id,
-        image_url: finalImageUrl,
-        message: 'AI image generated successfully!'
-      });
     
-    if (inboxError) {
-      console.error('❌ [nano-banana] Error inserting into inbox:', inboxError);
-    } else {
-      console.log('✅ [nano-banana] Successfully inserted into inbox');
+    const inboxInsertData = {
+      user_id: sessionData.creator_email || 'anonymous',
+      roast_session_id: sessionData.session_id,
+      generated_photo_url: finalImageUrl,
+      ai_image_url: finalImageUrl,
+      prompt: prompt,
+      original_photo_url: sessionData.original_photo_url,
+      recipient_identifier: sessionData.session_id
+    };
+    
+    console.log('🔍 [nano-banana] DEBUG: About to insert inbox data:', JSON.stringify(inboxInsertData, null, 2));
+    
+    try {
+      // First attempt: Standard insertion
+      console.log('🔄 [nano-banana] Attempting standard inbox insertion...');
+      const { data: inboxData, error: inboxError } = await supabaseClient
+        .from('inbox')
+        .insert(inboxInsertData)
+        .select();
+      
+      if (inboxError) {
+        console.error('❌ [nano-banana] Standard insertion failed:', inboxError);
+        console.error('❌ [nano-banana] Error code:', inboxError.code);
+        console.error('❌ [nano-banana] Error message:', inboxError.message);
+        
+        // Second attempt: Minimal data insertion
+        console.log('🔄 [nano-banana] Trying minimal data insertion...');
+        const minimalData = {
+          user_id: 'nano-banana-function',
+          roast_session_id: sessionData.session_id,
+          prompt: prompt,
+          generated_photo_url: finalImageUrl
+        };
+        
+        const { data: minimalResult, error: minimalError } = await supabaseClient
+          .from('inbox')
+          .insert(minimalData)
+          .select();
+          
+        if (minimalError) {
+          console.error('❌ [nano-banana] Minimal insertion failed:', minimalError);
+          
+          // Third attempt: Super minimal
+          console.log('🔄 [nano-banana] Trying super minimal insertion...');
+          const { data: superMinimal, error: superMinimalError } = await supabaseClient
+            .from('inbox')
+            .insert({
+              user_id: 'test',
+              prompt: 'test'
+            })
+            .select();
+            
+          if (superMinimalError) {
+            console.error('❌ [nano-banana] Super minimal insertion failed:', superMinimalError);
+          } else {
+            console.log('✅ [nano-banana] Super minimal insertion worked:', superMinimal);
+          }
+        } else {
+          console.log('✅ [nano-banana] Minimal insertion succeeded:', minimalResult);
+        }
+      } else {
+        console.log('✅ [nano-banana] Standard insertion succeeded:', inboxData);
+      }
+    } catch (insertException) {
+      console.error('❌ [nano-banana] Exception during inbox insertion:', insertException.message);
     }
 
     console.log('🎉 [nano-banana] AI image generation completed successfully!');

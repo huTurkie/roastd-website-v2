@@ -473,6 +473,7 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentSessionId = null;
+        let linkCode = null; // Make linkCode global so submit button can access it
 
         // Fetch photo and session data on page load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -481,7 +482,7 @@
 
             // Extract link code from URL query parameter (e.g., ...?code=CODE)
             const urlParams = new URLSearchParams(window.location.search);
-            const linkCode = urlParams.get('code');
+            linkCode = urlParams.get('code'); // Assign to global variable
 
             if (!linkCode) {
                 loadingSpinner.textContent = 'Error: No link code provided in the URL.';
