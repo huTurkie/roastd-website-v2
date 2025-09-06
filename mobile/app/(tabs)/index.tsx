@@ -472,8 +472,8 @@ function HomeScreen() {
 
       const publicUrl = urlData.publicUrl;
 
-      // Production roast link using live website
-      const roastLink = `roastd.link/unique-pic-id/?code=${linkCode}`;
+      // Production roast link using live website - simplified format
+      const roastLink = `roastd.link/${linkCode}`;
 
       Alert.alert(
         'Upload Successful!',
