@@ -43,44 +43,41 @@ export default function InboxScreen() {
 
   const fetchMessages = async () => {
     try {
-      console.log('📬 Fetching messages from Supabase...');
+      console.log('📬 Fetching messages from Supabase inbox table...');
 
-      // Fetch all roast sessions from Supabase
+      // Fetch AI-generated messages from inbox table (where nano-banana function inserts them)
       const { data, error } = await supabase
-        .from('roast_sessions')
+        .from('inbox')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching messages:', error);
+        console.error('Error fetching inbox messages:', error);
         Alert.alert('Error', 'Failed to load messages. Please try again.');
         // If there's an error, at least show the demo message
         setMessages([demoMessage]);
         return;
       }
 
-      console.log('📬 Fetched messages from Supabase:', data?.length || 0);
+      console.log('📬 Fetched inbox messages from Supabase:', data?.length || 0);
       
-      // Only show sessions that have been processed by AI (have generated_photo_url different from original)
-      const processedSessions = (data || []).filter(session => 
-        session.generated_photo_url && 
-        session.generated_photo_url !== session.original_photo_url
-      );
+      // All inbox records are AI-processed by definition (inserted by nano-banana function)
+      const processedMessages = data || [];
       
-      console.log('🤖 AI-processed sessions:', processedSessions.length);
+      console.log('🤖 AI-processed inbox messages:', processedMessages.length);
       
-      // Map roast_sessions data to InboxMessage format
-      const mappedMessages: InboxMessage[] = processedSessions.map(session => ({
-        id: session.session_id,
-        prompt: session.roast_prompt || 'New roast request',
-        roast: 'Roast pending...', // No roast_result field yet
-        created_at: session.created_at,
-        user_id: session.creator_email || 'anonymous',
-        original_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png',
-        generated_photo_url: session.generated_photo_url || 'https://placehold.co/600x400/png',
-        link_code: session.link_code,
-        roast_prompt: session.roast_prompt,
-        updated_prompt: session.updated_prompt
+      // Map inbox data to InboxMessage format
+      const mappedMessages: InboxMessage[] = processedMessages.map(inboxRecord => ({
+        id: inboxRecord.id.toString(),
+        prompt: inboxRecord.prompt || 'New AI roast request',
+        roast: 'AI roast generated!', // These are AI-generated images
+        created_at: inboxRecord.created_at,
+        user_id: inboxRecord.user_id || 'anonymous',
+        original_photo_url: inboxRecord.original_photo_url || 'https://placehold.co/600x400/png',
+        generated_photo_url: inboxRecord.ai_image_url || inboxRecord.generated_photo_url || 'https://placehold.co/600x400/png',
+        link_code: inboxRecord.recipient_identifier, // Using recipient_identifier as link reference
+        roast_prompt: inboxRecord.prompt,
+        updated_prompt: inboxRecord.prompt
       }));
       
       // Always include demo message first, then add real messages
@@ -89,7 +86,7 @@ export default function InboxScreen() {
       
       setMessages(allMessages);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('Error fetching inbox messages:', error);
       Alert.alert('Error', 'Failed to load messages. Please try again.');
       // If there's an error, at least show the demo message
       setMessages([demoMessage]);
