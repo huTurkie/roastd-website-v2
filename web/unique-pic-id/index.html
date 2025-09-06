@@ -539,6 +539,10 @@
             this.textContent = 'Sending...';
 
             try {
+                console.log('🌐 [WebApp] Submitting prompt to nano-banana function');
+                console.log('🌐 [WebApp] Session ID:', currentSessionId);
+                console.log('🌐 [WebApp] Prompt:', promptText);
+                
                 const { data, error } = await supabaseClient.functions.invoke('nano-banana', {
                     body: { 
                         sessionId: currentSessionId,
@@ -546,15 +550,26 @@
                     },
                 });
 
-                if (error) throw error;
+                console.log('🌐 [WebApp] Nano-banana response - Data:', data);
+                console.log('🌐 [WebApp] Nano-banana response - Error:', error);
 
+                if (error) {
+                    console.error('🌐 [WebApp] Nano-banana function error:', error);
+                    console.error('🌐 [WebApp] Error details:', JSON.stringify(error, null, 2));
+                    throw error;
+                }
+
+                console.log('🌐 [WebApp] Success! Response data:', JSON.stringify(data, null, 2));
                 alert('Sent to inbox! 💌');
                 promptInput.value = '';
                 this.textContent = 'Sent! ✔️';
                 document.querySelector('.input-section').style.display = 'none';
 
             } catch (error) {
-                console.error('Error sending to inbox:', error);
+                console.error('🌐 [WebApp] Exception caught:', error);
+                console.error('🌐 [WebApp] Exception message:', error.message);
+                console.error('🌐 [WebApp] Exception stack:', error.stack);
+                console.error('🌐 [WebApp] Full error object:', JSON.stringify(error, null, 2));
                 alert('There was an error sending your message. Please try again.');
                 this.disabled = false;
                 this.textContent = 'Send';

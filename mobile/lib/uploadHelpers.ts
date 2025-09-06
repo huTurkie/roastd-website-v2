@@ -177,3 +177,59 @@ export async function setUpdatedPrompt(
     return false;
   }
 }
+
+// Generate AI image using nano-banana function
+export async function generateAIImage(
+  linkCode: string,
+  prompt: string
+): Promise<boolean> {
+  try {
+    console.log('🎨 [generateAIImage] STARTING - Link code:', linkCode, 'Prompt:', prompt);
+    
+    // First get the session ID from the link code
+    console.log('🔍 [generateAIImage] Querying roast_sessions table for link_code:', linkCode);
+    const { data: sessionData, error: sessionError } = await supabase
+      .from('roast_sessions')
+      .select('session_id')
+      .eq('link_code', linkCode)
+      .single();
+
+    console.log('📊 [generateAIImage] Session query result:', { sessionData, sessionError });
+
+    if (sessionError || !sessionData) {
+      console.error('❌ [generateAIImage] Error finding session for link code:', sessionError);
+      return false;
+    }
+
+    console.log('✅ [generateAIImage] Found session_id:', sessionData.session_id);
+
+    // Call the nano-banana function
+    console.log('🚀 [generateAIImage] Calling nano-banana function with:', { 
+      sessionId: sessionData.session_id, 
+      prompt: prompt 
+    });
+    
+    const { data, error } = await supabase.functions.invoke('nano-banana', {
+      body: { 
+        sessionId: sessionData.session_id,
+        prompt: prompt
+      },
+    });
+
+    console.log('📡 [generateAIImage] Nano-banana function response:', { data, error });
+
+    if (error) {
+      console.error('❌ [generateAIImage] Error calling nano-banana function:', error);
+      console.error('❌ [generateAIImage] Error details:', JSON.stringify(error, null, 2));
+      return false;
+    }
+
+    console.log('✅ [generateAIImage] AI image generation initiated successfully');
+    console.log('📋 [generateAIImage] Response data:', JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('💥 [generateAIImage] Exception caught:', error);
+    console.error('💥 [generateAIImage] Exception stack:', error.stack);
+    return false;
+  }
+}

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { pickImage, uploadPhoto, createRoastSession, generateLinkCode, updateRoastPrompt } from '../../lib/uploadHelpers';
+import { pickImage, uploadPhoto, createRoastSession, generateLinkCode, updateRoastPrompt, generateAIImage } from '../../lib/uploadHelpers';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -243,24 +243,52 @@ function HomeScreen() {
   }, []);
 
   const handleDicePress = async () => {
+    console.log(' [handleDicePress] DICE BUTTON PRESSED');
+    
     const currentIndex = prompts.indexOf(currentPrompt);
     const nextIndex = (currentIndex + 1) % prompts.length;
     const newPrompt = prompts[nextIndex];
+    
+    console.log(' [handleDicePress] Current prompt:', currentPrompt);
+    console.log(' [handleDicePress] New prompt:', newPrompt);
+    console.log(' [handleDicePress] Current roastLink:', roastLink);
+    
     setCurrentPrompt(newPrompt);
 
     // If a photo has already been uploaded, update its prompt in the database
     if (roastLink) {
+      console.log(' [handleDicePress] RoastLink exists, proceeding with update');
       try {
         const linkCode = roastLink.split('code=')[1];
+        console.log(' [handleDicePress] Extracted link code:', linkCode);
+        
         if (linkCode) {
-          console.log(`Dice pressed. Updating prompt to "${newPrompt}" for link code: ${linkCode}`);
-          await updateRoastPrompt(linkCode, newPrompt);
+          console.log(` [handleDicePress] Updating prompt to "${newPrompt}" for link code: ${linkCode}`);
+          
+          const updateResult = await updateRoastPrompt(linkCode, newPrompt);
+          console.log(' [handleDicePress] updateRoastPrompt result:', updateResult);
+          
+          console.log(' [handleDicePress] Starting AI image generation...');
+          const aiResult = await generateAIImage(linkCode, newPrompt);
+          console.log(' [handleDicePress] generateAIImage result:', aiResult);
+          
+          if (aiResult) {
+            console.log(' [handleDicePress] AI generation completed successfully');
+          } else {
+            console.error(' [handleDicePress] AI generation failed');
+          }
+        } else {
+          console.error(' [handleDicePress] Could not extract link code from roastLink:', roastLink);
         }
       } catch (error) {
-        console.error('Failed to update prompt on dice press:', error);
-        // Optionally, inform the user that the update failed
+        console.error(' [handleDicePress] Exception in dice press handler:', error);
+        console.error(' [handleDicePress] Exception stack:', error.stack);
       }
+    } else {
+      console.log(' [handleDicePress] No roastLink available, skipping AI generation');
     }
+    
+    console.log(' [handleDicePress] DICE PRESS HANDLING COMPLETE');
   };
 
   const handleShare = async () => {

@@ -75,7 +75,7 @@ export default function InboxScreen() {
         created_at: session.created_at,
         user_id: session.creator_email || 'anonymous',
         original_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png',
-        generated_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png', // Use original for now
+        generated_photo_url: session.generated_photo_url || session.original_photo_url || 'https://placehold.co/600x400/png',
         link_code: session.link_code,
         roast_prompt: session.roast_prompt,
         updated_prompt: session.updated_prompt
