@@ -61,21 +61,23 @@ export default function InboxScreen() {
 
       console.log('📬 Fetched messages from Supabase:', data?.length || 0);
       
-      // Debug: Log the actual data structure
-      if (data && data.length > 0) {
-        console.log('🔍 First roast session data:', JSON.stringify(data[0], null, 2));
-        console.log('🔍 Available fields:', Object.keys(data[0]));
-      }
+      // Only show sessions that have been processed by AI (have generated_photo_url different from original)
+      const processedSessions = (data || []).filter(session => 
+        session.generated_photo_url && 
+        session.generated_photo_url !== session.original_photo_url
+      );
+      
+      console.log('🤖 AI-processed sessions:', processedSessions.length);
       
       // Map roast_sessions data to InboxMessage format
-      const mappedMessages: InboxMessage[] = (data || []).map(session => ({
+      const mappedMessages: InboxMessage[] = processedSessions.map(session => ({
         id: session.session_id,
         prompt: session.roast_prompt || 'New roast request',
         roast: 'Roast pending...', // No roast_result field yet
         created_at: session.created_at,
         user_id: session.creator_email || 'anonymous',
         original_photo_url: session.original_photo_url || 'https://placehold.co/600x400/png',
-        generated_photo_url: session.generated_photo_url || session.original_photo_url || 'https://placehold.co/600x400/png',
+        generated_photo_url: session.generated_photo_url || 'https://placehold.co/600x400/png',
         link_code: session.link_code,
         roast_prompt: session.roast_prompt,
         updated_prompt: session.updated_prompt

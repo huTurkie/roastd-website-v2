@@ -34,6 +34,7 @@ import { NativeModules } from 'react-native';
 import Constants from 'expo-constants';
 import { Link } from 'expo-router';
 import AppHeader from '@/components/AppHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let Share: any;
 if (Constants.appOwnership !== 'expo') {
@@ -228,7 +229,28 @@ function HomeScreen() {
       }
     };
 
+    // Load persisted image and roast link
+    const loadPersistedData = async () => {
+      try {
+        const savedImageUri = await AsyncStorage.getItem('uploadedImageUri');
+        const savedRoastLink = await AsyncStorage.getItem('roastLink');
+        
+        if (savedImageUri) {
+          setUploadedImageUri(savedImageUri);
+          console.log('📱 Restored uploaded image from storage');
+        }
+        
+        if (savedRoastLink) {
+          setRoastLink(savedRoastLink);
+          console.log('📱 Restored roast link from storage');
+        }
+      } catch (error) {
+        console.error('Error loading persisted data:', error);
+      }
+    };
+
     testSupabaseConnection();
+    loadPersistedData();
   }, []);
 
   useEffect(() => {
@@ -445,6 +467,12 @@ function HomeScreen() {
 
       setUploadedImageUri(uri);
       setRoastLink(localRoastLink);
+      
+      // Persist image and roast link to AsyncStorage
+      await AsyncStorage.setItem('uploadedImageUri', uri);
+      await AsyncStorage.setItem('roastLink', localRoastLink);
+      console.log('📱 Saved uploaded image and roast link to storage');
+      
       setIsUploading(false);
     } catch (error) {
       console.error('Upload process failed:', error);
