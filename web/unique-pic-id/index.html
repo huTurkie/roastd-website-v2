@@ -545,7 +545,7 @@
                 
                 const { data, error } = await supabaseClient.functions.invoke('nano-banana', {
                     body: { 
-                        sessionId: currentSessionId,
+                        link_code: linkCode,  // Fixed: Use linkCode instead of currentSessionId
                         prompt: promptText
                     },
                 });

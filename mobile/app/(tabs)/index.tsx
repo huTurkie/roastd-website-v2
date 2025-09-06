@@ -277,9 +277,10 @@ function HomeScreen() {
     
     setCurrentPrompt(newPrompt);
 
-    // If a photo has already been uploaded, update its prompt in the database
+    // Only update the prompt in database, DO NOT trigger AI generation
+    // AI generation should only happen when user2 adds prompt on web
     if (roastLink) {
-      console.log(' [handleDicePress] RoastLink exists, proceeding with update');
+      console.log(' [handleDicePress] RoastLink exists, updating prompt only (no AI generation)');
       try {
         const linkCode = roastLink.split('code=')[1];
         console.log(' [handleDicePress] Extracted link code:', linkCode);
@@ -290,15 +291,9 @@ function HomeScreen() {
           const updateResult = await updateRoastPrompt(linkCode, newPrompt);
           console.log(' [handleDicePress] updateRoastPrompt result:', updateResult);
           
-          console.log(' [handleDicePress] Starting AI image generation...');
-          const aiResult = await generateAIImage(linkCode, newPrompt);
-          console.log(' [handleDicePress] generateAIImage result:', aiResult);
+          // REMOVED: AI generation should only happen from web interface
+          console.log(' [handleDicePress] Prompt updated. AI generation will happen when user2 adds prompt on web.');
           
-          if (aiResult) {
-            console.log(' [handleDicePress] AI generation completed successfully');
-          } else {
-            console.error(' [handleDicePress] AI generation failed');
-          }
         } else {
           console.error(' [handleDicePress] Could not extract link code from roastLink:', roastLink);
         }
@@ -307,7 +302,7 @@ function HomeScreen() {
         console.error(' [handleDicePress] Exception stack:', error.stack);
       }
     } else {
-      console.log(' [handleDicePress] No roastLink available, skipping AI generation');
+      console.log(' [handleDicePress] No roastLink available, only updating local prompt');
     }
     
     console.log(' [handleDicePress] DICE PRESS HANDLING COMPLETE');

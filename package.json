@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.0",
+    "@supabase/supabase-js": "^2.57.2",
     "base-64": "^1.0.0",
     "expo": "^53.0.20",
     "expo-blur": "~14.1.5",

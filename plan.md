@@ -14,7 +14,12 @@ Hosting: Vercel for roast links (roastit.link/xyz123)
 
 Storage: Supabase Storage (for uploaded photos, private, using signed URLs) 
 
-AI Image Generation: NanoBanana Google model → generates roasted/edited images based on User 2 submissions 
+AI Image Generation: Gemini 2.5 Flash Image Preview model → generates roasted/edited images based on User 2 submissions
+
+**CRITICAL RULE: NEVER CHANGE THE AI MODEL**
+- Gemini 2.5 Flash Image Preview works perfectly and generates images correctly
+- Any issues are code implementation problems in nano-banana function, NOT model problems
+- Always use Gemini 2.5 Flash Image Preview - NEVER suggest changing to other models 
 
  
  
