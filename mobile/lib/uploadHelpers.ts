@@ -58,12 +58,13 @@ export async function uploadPhoto(uri: string, fileName: string): Promise<string
   }
 }
 
-// Create a roast session in the database
+// Create a roast session in the database with user info
 export async function createRoastSession(
   creatorEmail: string | null,
   photoPath: string,
   prompt: string,
-  linkCode: string
+  linkCode: string,
+  username?: string
 ): Promise<string | null> {
   try {
     // Get the public URL for the uploaded photo
@@ -76,19 +77,22 @@ export async function createRoastSession(
       return null;
     }
 
-    // Call the database function instead of a direct insert
+    // Use RPC function to create roast session (bypasses RLS)
     const { data, error } = await supabase.rpc('create_roast_session_for_anon', {
       photo_url: urlData.publicUrl,
       prompt: prompt,
       code: linkCode,
+      creator_email_param: creatorEmail,
+      username_param: username || null,
     });
 
     if (error) {
-      console.error('Database RPC error:', error);
+      console.error('Database insert error:', error);
       return null;
     }
 
-    return data; // The function returns the session_id directly
+    console.log('✅ Roast session created with user info:', { username, email: creatorEmail });
+    return data;
   } catch (error) {
     console.error('Error creating roast session:', error);
     return null;

@@ -1,10 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Switch, TouchableOpacity, FlatList, Text, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  Alert,
+  RefreshControl,
+  ActivityIndicator,
+  Switch,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '../../lib/supabase';
 import AppHeader from '@/components/AppHeader';
-import { supabase } from '@/lib/supabase';
+import UserRegistration from '@/components/UserRegistration';
+import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
 import MessageDetailModal from '@/components/MessageDetailModal';
 
 interface InboxMessage {
@@ -27,6 +41,8 @@ export default function InboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showUserRegistration, setShowUserRegistration] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   const toggleSwitch = () => setNotificationsEnabled(previousState => !previousState);
 
@@ -45,10 +61,20 @@ export default function InboxScreen() {
     try {
       console.log('📬 Fetching messages from Supabase inbox table...');
 
-      // Fetch AI-generated messages from inbox table (where nano-banana function inserts them)
+      if (!userInfo) {
+        console.log('⚠️ No user info available, showing demo message only');
+        setMessages([demoMessage]);
+        return;
+      }
+
+      // Fetch AI-generated messages from inbox table filtered by user
       const { data, error } = await supabase
         .from('inbox')
-        .select('*')
+        .select(`
+          *,
+          roast_sessions!inner(username, creator_email)
+        `)
+        .eq('roast_sessions.username', userInfo.username)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -127,8 +153,30 @@ export default function InboxScreen() {
   };
 
   useEffect(() => {
-    fetchMessages();
+    const checkUserAndFetch = async () => {
+      try {
+        const registered = await isUserRegistered();
+        if (!registered) {
+          setShowUserRegistration(true);
+        } else {
+          const user = await getUserInfo();
+          setUserInfo(user);
+          console.log('👤 User loaded in inbox:', user);
+        }
+      } catch (error) {
+        console.error('Error checking user registration:', error);
+        setShowUserRegistration(true);
+      }
+    };
+
+    checkUserAndFetch();
   }, []);
+
+  useEffect(() => {
+    if (userInfo) {
+      fetchMessages();
+    }
+  }, [userInfo]);
 
   const renderMessage = ({ item }: { item: InboxMessage }) => (
     <TouchableOpacity 
@@ -179,13 +227,27 @@ export default function InboxScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <AppHeader activeTab="inbox" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F14060" />
-          <Text style={styles.loadingText}>Loading messages...</Text>
-        </View>
-      </SafeAreaView>
+      <>
+        <SafeAreaView style={styles.container}>
+          <AppHeader activeTab="inbox" />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#F14060" />
+            <Text style={styles.loadingText}>Loading messages...</Text>
+          </View>
+        </SafeAreaView>
+        
+        <UserRegistration
+          visible={showUserRegistration}
+          onComplete={async (userInfo) => {
+            setUserInfo(userInfo);
+            setShowUserRegistration(false);
+            console.log('👤 User registration completed in inbox:', userInfo);
+          }}
+          onCancel={() => {
+            setShowUserRegistration(false);
+          }}
+        />
+      </>
     );
   }
 
@@ -220,6 +282,18 @@ export default function InboxScreen() {
         message={selectedMessage}
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
+      />
+      
+      <UserRegistration
+        visible={showUserRegistration}
+        onComplete={async (userInfo) => {
+          setUserInfo(userInfo);
+          setShowUserRegistration(false);
+          console.log('👤 User registration completed in inbox:', userInfo);
+        }}
+        onCancel={() => {
+          setShowUserRegistration(false);
+        }}
       />
     </SafeAreaView>
   );

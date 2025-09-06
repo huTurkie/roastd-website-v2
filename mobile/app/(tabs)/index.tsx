@@ -35,6 +35,8 @@ import Constants from 'expo-constants';
 import { Link } from 'expo-router';
 import AppHeader from '@/components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import UserRegistration from '@/components/UserRegistration';
+import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
 
 let Share: any;
 if (Constants.appOwnership !== 'expo') {
@@ -149,6 +151,8 @@ function HomeScreen() {
   const [promptIndex, setPromptIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
+  const [showUserRegistration, setShowUserRegistration] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   const viewShotRef = useRef<ViewShot>(null);
   const shareViewShotRef = useRef<ViewShot>(null);
@@ -229,6 +233,23 @@ function HomeScreen() {
       }
     };
 
+    // Check if user is registered
+    const checkUserRegistration = async () => {
+      try {
+        const registered = await isUserRegistered();
+        if (!registered) {
+          setShowUserRegistration(true);
+        } else {
+          const user = await getUserInfo();
+          setUserInfo(user);
+          console.log('👤 User loaded:', user);
+        }
+      } catch (error) {
+        console.error('Error checking user registration:', error);
+        setShowUserRegistration(true);
+      }
+    };
+
     // Load persisted image and roast link
     const loadPersistedData = async () => {
       try {
@@ -250,6 +271,7 @@ function HomeScreen() {
     };
 
     testSupabaseConnection();
+    checkUserRegistration();
     loadPersistedData();
   }, []);
 
@@ -431,10 +453,11 @@ function HomeScreen() {
       }
 
       const sessionId = await createRoastSession(
-        null,
+        userInfo?.email || null,
         photoPath,
         currentPrompt,
-        linkCode
+        linkCode,
+        userInfo?.username
       );
 
       if (!sessionId) {
@@ -593,6 +616,18 @@ function HomeScreen() {
           </View>
         </View>
       </SafeAreaView>
+      
+      <UserRegistration
+        visible={showUserRegistration}
+        onComplete={async (userInfo) => {
+          setUserInfo(userInfo);
+          setShowUserRegistration(false);
+          console.log('👤 User registration completed:', userInfo);
+        }}
+        onCancel={() => {
+          setShowUserRegistration(false);
+        }}
+      />
     </GestureHandlerRootView>
   );
 }
