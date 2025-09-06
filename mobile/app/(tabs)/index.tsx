@@ -472,23 +472,23 @@ function HomeScreen() {
 
       const publicUrl = urlData.publicUrl;
 
-      // IMPORTANT: Replace YOUR_LOCAL_IP with your computer's local IP address.
-      const localRoastLink = `http://YOUR_LOCAL_IP:8000/unique-pic-id/index.html?code=${linkCode}`;
+      // Production roast link using live website
+      const roastLink = `roastd.link/unique-pic-id/?code=${linkCode}`;
 
       Alert.alert(
         'Upload Successful!',
-        `Your local roast link is ready: ${localRoastLink}`
+        `Your roast link is ready: ${roastLink}`
       );
 
       console.log(` Roast session created! Link code: ${linkCode}`);
       console.log(` Public photo URL: ${publicUrl}`);
 
       setUploadedImageUri(uri);
-      setRoastLink(localRoastLink);
+      setRoastLink(roastLink);
       
       // Persist image and roast link to AsyncStorage
       await AsyncStorage.setItem('uploadedImageUri', uri);
-      await AsyncStorage.setItem('roastLink', localRoastLink);
+      await AsyncStorage.setItem('roastLink', roastLink);
       console.log('📱 Saved uploaded image and roast link to storage');
       
       setIsUploading(false);
