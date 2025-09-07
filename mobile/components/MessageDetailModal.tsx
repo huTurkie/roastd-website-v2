@@ -252,12 +252,18 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
 
             {/* Watermark Footer - only visible in shared content */}
             <View style={styles.watermarkContainer}>
-              <View style={styles.watermarkGradient}>
-                <Text style={styles.watermarkText}>
-                  <Text style={styles.roastdText}>Roastd</Text>
-                  <Text style={styles.linkText}>.link</Text>
-                </Text>
-              </View>
+              <LinearGradient
+                colors={['#1a1a2e', '#16213e', '#0f3460']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.watermarkGradient}
+              >
+                <Image 
+                  source={require('../assets/images/footer3.png')}
+                  style={styles.watermarkLogo}
+                  resizeMode="contain"
+                />
+              </LinearGradient>
             </View>
           </ViewShot>
         )}
@@ -436,28 +442,16 @@ const styles = StyleSheet.create({
     height: 120, // Fixed footer height
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2B2D42', // Dark navy background matching the logo
   },
   watermarkGradient: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    borderRadius: 8,
   },
-  watermarkText: {
-    fontSize: 36,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  roastdText: {
-    color: '#FF6B47', // Orange/coral color from the logo
-    fontSize: 36,
-    fontWeight: '700',
-  },
-  linkText: {
-    color: 'white',
-    fontSize: 36,
-    fontWeight: '700',
+  watermarkLogo: {
+    width: 700,
+    height: 200,
   },
 });
