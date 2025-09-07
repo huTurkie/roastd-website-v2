@@ -52,28 +52,41 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
   if (!message) return null;
 
   const viewShotRef = useRef<ViewShot>(null);
+  const shareViewShotRef = useRef<ViewShot>(null);
   const [currentGradientIndex, setCurrentGradientIndex] = useState(0);
   const [selectedSocial, setSelectedSocial] = useState('instagram');
   const [isShowingOriginal, setIsShowingOriginal] = useState(false);
+  const [isCapturingShare, setIsCapturingShare] = useState(false);
 
   const cycleGradient = () => {
     setCurrentGradientIndex((prevIndex) => (prevIndex + 1) % gradients.length);
   };
 
   const handleShare = async () => {
-    if (!viewShotRef.current) {
-      Alert.alert('Error', 'Cannot capture view for sharing.');
-      return;
-    }
-
     try {
-      const uri = await captureRef(viewShotRef, {
+      // Trigger off-screen rendering of shareable content with watermark
+      setIsCapturingShare(true);
+      
+      // Wait for next render cycle to ensure the hidden ViewShot is rendered
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Check if ref is available after rendering
+      if (!shareViewShotRef.current) {
+        setIsCapturingShare(false);
+        Alert.alert('Error', 'Cannot capture view for sharing. Please try again.');
+        return;
+      }
+      
+      const uri = await captureRef(shareViewShotRef, {
         format: 'jpg',
         quality: 0.9,
         result: 'tmpfile',
-        width: 1080, // Explicitly set width for 9:16 aspect ratio
-        height: 1920, // Explicitly set height for 9:16 aspect ratio
+        width: 1080, // Explicitly set width for Instagram Stories
+        height: 1920, // Full Instagram Story height
       });
+      
+      // Hide the off-screen content
+      setIsCapturingShare(false);
 
       if (!uri) {
         Alert.alert('Oops!', 'Could not capture the image for sharing.');
@@ -107,6 +120,7 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       }
     } catch (error: any) {
       console.error('Sharing error:', error);
+      setIsCapturingShare(false); // Ensure state is reset on error
       if (error.message.includes('No Activity found to handle Intent')) {
         Alert.alert('Error', 'Could not open Instagram. Please make sure it is installed.');
       } else {
@@ -211,6 +225,42 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
             </View>
           </View>
         </SafeAreaView>
+        
+        {/* Hidden ViewShot for sharing with watermark - positioned off-screen */}
+        {isCapturingShare && (
+          <ViewShot 
+            ref={shareViewShotRef} 
+            options={{ format: 'jpg', quality: 0.9 }} 
+            style={styles.hiddenShareContainer}
+          >
+            {/* Prompt Card */}
+            <LinearGradient
+              colors={gradients[currentGradientIndex]}
+              style={styles.sharePromptContainer}
+            >
+              <Text style={[styles.sharePromptText, currentGradientIndex === gradients.length - 1 && styles.sharePromptTextBlack]}>
+                {message.updated_prompt || message.roast_prompt || message.prompt || "No prompt available"}
+              </Text>
+            </LinearGradient>
+
+            {/* Generated Image */}
+            <Image 
+              source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
+              style={styles.shareImage}
+              resizeMode="cover"
+            />
+
+            {/* Watermark Footer - only visible in shared content */}
+            <View style={styles.watermarkContainer}>
+              <View style={styles.watermarkGradient}>
+                <Text style={styles.watermarkText}>
+                  <Text style={styles.roastdText}>Roastd</Text>
+                  <Text style={styles.linkText}>.link</Text>
+                </Text>
+              </View>
+            </View>
+          </ViewShot>
+        )}
       </View>
     </Modal>
   );
@@ -263,7 +313,7 @@ const styles = StyleSheet.create({
   },
   mainCard: {
     width: '100%',
-    borderRadius: 20,
+    borderRadius: 0,
     overflow: 'hidden',
     backgroundColor: 'white',
     shadowColor: '#000',
@@ -344,5 +394,70 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Hidden ViewShot styles for off-screen watermark capture
+  hiddenShareContainer: {
+    position: 'absolute',
+    left: -9999, // Position off-screen
+    top: -9999, // Position off-screen
+    width: 1080, // Match capture width
+    height: 1920, // Full Instagram Story height
+    backgroundColor: '#000000', // Black background for full story
+    overflow: 'hidden',
+    flexDirection: 'column',
+  },
+  sharePromptContainer: {
+    padding: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 120, // Fixed header height
+  },
+  sharePromptText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  sharePromptTextBlack: {
+    color: 'black',
+  },
+  shareImage: {
+    width: '100%',
+    height: 1680, // Fill remaining space (1920 - 120 header - 120 footer)
+    resizeMode: 'cover',
+  },
+  watermarkContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: 120, // Fixed footer height
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2B2D42', // Dark navy background matching the logo
+  },
+  watermarkGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  watermarkText: {
+    fontSize: 36,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  roastdText: {
+    color: '#FF6B47', // Orange/coral color from the logo
+    fontSize: 36,
+    fontWeight: '700',
+  },
+  linkText: {
+    color: 'white',
+    fontSize: 36,
+    fontWeight: '700',
   },
 });

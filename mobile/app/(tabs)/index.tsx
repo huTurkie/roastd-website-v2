@@ -304,7 +304,7 @@ function HomeScreen() {
     if (roastLink) {
       console.log(' [handleDicePress] RoastLink exists, updating prompt only (no AI generation)');
       try {
-        const linkCode = roastLink.split('code=')[1];
+        const linkCode = roastLink.split('/').pop();
         console.log(' [handleDicePress] Extracted link code:', linkCode);
         
         if (linkCode) {
