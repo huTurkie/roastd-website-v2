@@ -393,11 +393,13 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
                 style={styles.mainCard}
               >
                 {/* Generated Image */}
-                <Image 
-                  source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
-                  style={styles.generatedImage}
-                  resizeMode="cover"
-                />
+                <View style={styles.imageWrapper}>
+                  <Image 
+                    source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
+                    style={styles.generatedImage}
+                    resizeMode="cover"
+                  />
+                </View>
                 
                 {/* Draggable Prompt Card - Same as display */}
                 <GestureDetector gesture={combinedGesture}>
@@ -426,8 +428,8 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
               {/* Gesture Hints - Outside ViewShot so they don't get captured */}
               {showGestureHints && (
                 <Animated.View style={[styles.messageDetailTopHint, topHintStyle]}>
-                  <Text style={styles.messageDetailHintText}>Move me 👇</Text>
                   <Text style={styles.messageDetailHintSubText}>Drag to move, pinch to resize, tap Reply to share on your story</Text>
+                  <Text style={styles.messageDetailHintText}>Move me 👇</Text>
                 </Animated.View>
               )}
 
@@ -515,7 +517,7 @@ const styles = StyleSheet.create({
   },
   mainCard: {
     width: '100%',
-    borderRadius: 0,
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: 'white',
     shadowColor: '#000',
@@ -623,9 +625,15 @@ const styles = StyleSheet.create({
   promptTextBlack: {
     color: 'black',
   },
-  generatedImage: {
+  imageWrapper: {
     width: '100%',
     height: height * 0.65,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  generatedImage: {
+    width: '100%',
+    height: '100%',
   },
   footerContainer: {
     width: '100%',
