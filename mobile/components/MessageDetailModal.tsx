@@ -1,12 +1,18 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, SafeAreaView, Dimensions, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, SafeAreaView, Dimensions, Platform, Alert, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as IntentLauncher from 'expo-intent-launcher';
+import * as Sharing from 'expo-sharing';
+import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
+import StickerCreator, { StickerCreatorRef } from './StickerCreator';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 let Share: any;
 if (Constants.appOwnership !== 'expo') {
@@ -49,17 +55,194 @@ interface MessageDetailModalProps {
 }
 
 export default function MessageDetailModal({ visible, message, onClose }: MessageDetailModalProps) {
-  if (!message) return null;
-
+  // All hooks must be called before any conditional logic
   const viewShotRef = useRef<ViewShot>(null);
-  const shareViewShotRef = useRef<ViewShot>(null);
+  const backgroundViewShotRef = useRef<ViewShot>(null);
+  const stickerCreatorRef = useRef<StickerCreatorRef>(null);
   const [currentGradientIndex, setCurrentGradientIndex] = useState(0);
   const [selectedSocial, setSelectedSocial] = useState('instagram');
   const [isShowingOriginal, setIsShowingOriginal] = useState(false);
+  const [isCapturingBackground, setIsCapturingBackground] = useState(false);
+  const [previewStickerUri, setPreviewStickerUri] = useState<string | null>(null);
+  const [showGestureHint, setShowGestureHint] = useState(true);
+  const [showInteractiveModal, setShowInteractiveModal] = useState(false);
   const [isCapturingShare, setIsCapturingShare] = useState(false);
+
+  // Shared values for draggable sticker (same as main screen)
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  
+  // Gesture hint animation
+  const hintOpacity = useSharedValue(1);
+  const hintScale = useSharedValue(1);
+
+  // Animated styles for sticker - MUST be before conditional logic
+  const animatedStickerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  });
+
+  // Animated styles for Instagram sticker (scaled to canvas)
+  const animatedInstagramStickerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value * (1080 / width) },
+        { translateY: translateY.value * (1920 / height) },
+        { scale: scale.value },
+      ],
+    };
+  });
+
+  // Animated styles for gesture hint - MUST be before conditional logic
+  const animatedHintStyle = useAnimatedStyle(() => {
+    return {
+      opacity: hintOpacity.value,
+      transform: [{ scale: hintScale.value }],
+    };
+  });
+
+  // Pan gesture for dragging sticker - MUST be before conditional logic
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      'worklet';
+      // Hide gesture hint when user starts interacting
+      hintOpacity.value = withSpring(0, { duration: 300 });
+      hintScale.value = withSpring(0.8, { duration: 300 });
+    })
+    .onUpdate((event) => {
+      'worklet';
+      translateX.value = savedTranslateX.value + event.translationX;
+      translateY.value = savedTranslateY.value + event.translationY;
+    })
+    .onEnd(() => {
+      'worklet';
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  // Pinch gesture for scaling sticker - MUST be before conditional logic
+  const pinchGesture = Gesture.Pinch()
+    .onBegin(() => {
+      'worklet';
+      // Hide gesture hint when user starts interacting
+      hintOpacity.value = withSpring(0, { duration: 300 });
+      hintScale.value = withSpring(0.8, { duration: 300 });
+    })
+    .onUpdate((event) => {
+      'worklet';
+      scale.value = savedScale.value * event.scale;
+    })
+    .onEnd(() => {
+      'worklet';
+      savedScale.value = scale.value;
+    });
+
+  // Combined gesture - MUST be before conditional logic
+  const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
   const cycleGradient = () => {
     setCurrentGradientIndex((prevIndex) => (prevIndex + 1) % gradients.length);
+  };
+
+  if (!message) {
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color="#A9A9A9" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 16 }}>No message selected</Text>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+    );
+  }
+
+  const handleReplyPress = () => {
+    // Reset gesture hint when reply is pressed
+    hintOpacity.value = 1;
+    hintScale.value = 1;
+    setShowGestureHint(true);
+  };
+
+  const handleInteractiveShare = async () => {
+    try {
+      // Capture the main ViewShot which includes the positioned prompt
+      if (!viewShotRef.current) {
+        Alert.alert('Error', 'Cannot capture image. Please try again.');
+        return;
+      }
+
+      const compositeUri = await captureRef(viewShotRef, {
+        format: 'png',
+        quality: 1.0,
+        result: 'tmpfile',
+        width: 1080,
+        height: 1920,
+      });
+
+      if (!compositeUri) {
+        Alert.alert('Error', 'Could not capture image.');
+        return;
+      }
+
+      // Share captured image directly to Instagram without any modifications
+      if (Platform.OS === 'android') {
+        const contentUri = await FileSystem.getContentUriAsync(compositeUri);
+        await IntentLauncher.startActivityAsync('com.instagram.share.ADD_TO_STORY', {
+          data: contentUri,
+          flags: 1,
+          type: 'image/png',
+        });
+      } else if (Platform.OS === 'ios') {
+        const base64Image = await FileSystem.readAsStringAsync(compositeUri, { encoding: FileSystem.EncodingType.Base64 });
+        const imageUriBase64 = `data:image/png;base64,${base64Image}`;
+
+        const shareOptions = {
+          social: Share.Social.INSTAGRAM_STORIES,
+          backgroundImage: imageUriBase64,
+        };
+
+        if (Share.shareSingle && Constants.appOwnership !== 'expo') {
+          await Share.shareSingle(shareOptions);
+        } else {
+          Alert.alert('Instagram Sharing Unavailable', 'Instagram sharing is not available in Expo Go. Please use a development build or production app.');
+        }
+      } else {
+        await Sharing.shareAsync(compositeUri.uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Share to Instagram Stories',
+        });
+      }
+
+      setShowInteractiveModal(false);
+    } catch (error: any) {
+      console.error('Interactive sharing error:', error);
+      setIsCapturingBackground(false);
+      if (error.message.includes('No Activity found to handle Intent')) {
+        Alert.alert('Error', 'Could not open Instagram. Please make sure it is installed.');
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred during sharing.');
+      }
+    }
   };
 
   const handleShare = async () => {
@@ -71,13 +254,13 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Check if ref is available after rendering
-      if (!shareViewShotRef.current) {
+      if (!viewShotRef.current) {
         setIsCapturingShare(false);
         Alert.alert('Error', 'Cannot capture view for sharing. Please try again.');
         return;
       }
       
-      const uri = await captureRef(shareViewShotRef, {
+      const uri = await captureRef(viewShotRef, {
         format: 'jpg',
         quality: 0.9,
         result: 'tmpfile',
@@ -135,59 +318,81 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       transparent={true}
       animationType="slide"
     >
-      <View style={styles.modalContainer}>
-        <SafeAreaView style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Ionicons name="ellipsis-horizontal" size={28} color="#A9A9A9" />
-            <View style={styles.socialIcons}>
-              <TouchableOpacity 
-                style={[styles.socialIconWrapper, selectedSocial === 'instagram' && styles.selectedSocialIconWrapper]}
-                onPress={() => setSelectedSocial('instagram')}
-              >
-                <Ionicons name="logo-instagram" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.socialIconWrapper, selectedSocial === 'snapchat' && styles.selectedSocialIconWrapper]}
-                onPress={() => setSelectedSocial('snapchat')}
-              >
-                <Ionicons name="logo-snapchat" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.socialIconWrapper, selectedSocial === 'whatsapp' && styles.selectedSocialIconWrapper]}
-                onPress={() => setSelectedSocial('whatsapp')}
-              >
-                <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Ionicons name="ellipsis-horizontal" size={28} color="#A9A9A9" />
+              <View style={styles.socialIcons}>
+                <TouchableOpacity 
+                  style={[styles.socialIconWrapper, selectedSocial === 'instagram' && styles.selectedSocialIconWrapper]}
+                  onPress={() => setSelectedSocial('instagram')}
+                >
+                  <Ionicons name="logo-instagram" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.socialIconWrapper, selectedSocial === 'snapchat' && styles.selectedSocialIconWrapper]}
+                  onPress={() => setSelectedSocial('snapchat')}
+                >
+                  <Ionicons name="logo-snapchat" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.socialIconWrapper, selectedSocial === 'whatsapp' && styles.selectedSocialIconWrapper]}
+                  onPress={() => setSelectedSocial('whatsapp')}
+                >
+                  <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color="#A9A9A9" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color="#A9A9A9" />
-            </TouchableOpacity>
-          </View>
 
-          {/* Content */}
-          <View style={styles.content}>
-            {/* Main Card */}
-            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }} style={styles.mainCard}>
-              {/* Prompt Card */}
-              <LinearGradient
-                colors={gradients[currentGradientIndex]}
-                style={styles.promptContainer}
+            {/* Content */}
+            <ScrollView 
+              style={styles.content} 
+              contentContainerStyle={styles.scrollContentContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* ViewShot wraps the main card to capture exactly what user sees */}
+              <ViewShot 
+                ref={viewShotRef} 
+                options={{ format: 'png', quality: 1.0, width: undefined, height: undefined }} 
+                style={styles.mainCard}
               >
-                <Text style={[styles.promptText, currentGradientIndex === gradients.length - 1 && styles.promptTextBlack]}>
-                  {message.updated_prompt || message.roast_prompt || message.prompt || "No prompt available"}
-                </Text>
-              </LinearGradient>
+                {/* Generated Image */}
+                <Image 
+                  source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
+                  style={styles.generatedImage}
+                  resizeMode="cover"
+                />
+                
+                {/* Draggable Prompt Card - Same as display */}
+                <GestureDetector gesture={combinedGesture}>
+                  <Animated.View style={[styles.promptContainer, animatedStickerStyle]}>
+                    <LinearGradient
+                      colors={gradients[currentGradientIndex]}
+                      style={styles.promptGradient}
+                    >
+                      <Text style={[styles.promptText, currentGradientIndex === gradients.length - 1 && styles.promptTextBlack]}>
+                        {message.updated_prompt || message.roast_prompt || message.prompt || "No prompt available"}
+                      </Text>
+                    </LinearGradient>
+                  </Animated.View>
+                </GestureDetector>
 
-              {/* Generated Image */}
-              <Image 
-                source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
-                style={styles.generatedImage}
-                resizeMode="cover"
-              />
-            </ViewShot>
+                {/* Watermark */}
+                <View style={styles.watermarkCapture}>
+                  <Image 
+                    source={require('../assets/images/footer3.png')}
+                    style={styles.watermarkCaptureImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              </ViewShot>
 
-            <View style={styles.footerContainer}>
+              <View style={styles.footerContainer}>
               <View style={styles.buttonRow}>
                 {/* Color Cycle Button */}
                 <TouchableOpacity onPress={cycleGradient} style={styles.gradientCircleButton}>
@@ -199,75 +404,29 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
 
                 {/* Image Toggle Button */}
                 <TouchableOpacity onPress={() => setIsShowingOriginal(!isShowingOriginal)} style={styles.toggleButton}>
-                  <LinearGradient
-                    colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.toggleButtonGradient}
-                  >
-                    <Text style={styles.toggleButtonText}>
-                      {isShowingOriginal ? 'Roastd' : 'Original'}
-                    </Text>
-                  </LinearGradient>
+                    <LinearGradient
+                      colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.toggleButtonGradient}
+                    >
+                      <Text style={styles.toggleButtonText}>
+                        {isShowingOriginal ? 'Roastd' : 'Original'}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Share Button */}
+                <TouchableOpacity onPress={handleShare} style={styles.replyButton}>
+                  <Ionicons name="logo-instagram" size={20} color="#fff" />
+                  <Text style={styles.replyButtonText}>reply</Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Footer Text */}
-              <Text style={styles.footerText}>
-                sent with love 🩷 from Roast Team
-              </Text>
-
-              {/* Reply Button */}
-              <TouchableOpacity style={styles.replyButton} onPress={handleShare}>
-                <Ionicons name="logo-instagram" size={20} color="white" style={styles.replyIcon} />
-                <Text style={styles.replyText}>reply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-        
-        {/* Hidden ViewShot for sharing with watermark - positioned off-screen */}
-        {isCapturingShare && (
-          <ViewShot 
-            ref={shareViewShotRef} 
-            options={{ format: 'jpg', quality: 0.9 }} 
-            style={styles.hiddenShareContainer}
-          >
-            {/* Prompt Card */}
-            <LinearGradient
-              colors={gradients[currentGradientIndex]}
-              style={styles.sharePromptContainer}
-            >
-              <Text style={[styles.sharePromptText, currentGradientIndex === gradients.length - 1 && styles.sharePromptTextBlack]}>
-                {message.updated_prompt || message.roast_prompt || message.prompt || "No prompt available"}
-              </Text>
-            </LinearGradient>
-
-            {/* Generated Image */}
-            <Image 
-              source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
-              style={styles.shareImage}
-              resizeMode="cover"
-            />
-
-            {/* Watermark Footer - only visible in shared content */}
-            <View style={styles.watermarkContainer}>
-              <LinearGradient
-                colors={['#1a1a2e', '#16213e', '#0f3460']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.watermarkGradient}
-              >
-                <Image 
-                  source={require('../assets/images/footer3.png')}
-                  style={styles.watermarkLogo}
-                  resizeMode="contain"
-                />
-              </LinearGradient>
-            </View>
-          </ViewShot>
-        )}
-      </View>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -312,9 +471,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    alignItems: 'center',
     paddingHorizontal: 20,
-    justifyContent: 'space-between',
     paddingBottom: 20,
   },
   mainCard: {
@@ -327,12 +484,96 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
-    marginTop: 20,
+    marginTop: -20,
   },
   promptContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
     padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+  },
+  promptGradient: {
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  // Hidden Instagram Stories canvas - Fixed dimensions
+  hiddenInstagramCanvas: {
+    position: 'absolute',
+    left: -9999,
+    top: -9999,
+    width: 1080,
+    height: 1920,
+    backgroundColor: '#000',
+  },
+  instagramBackgroundImage: {
+    width: 1080,
+    height: 1920,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  instagramPromptContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 50,
+    width: 200,
+    height: 80,
+    zIndex: 10,
+  },
+  instagramPromptGradient: {
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  instagramPromptText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  instagramWatermark: {
+    position: 'absolute',
+    bottom: 50,
+    right: 50,
+    width: 200,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  instagramWatermarkLogo: {
+    width: 180,
+    height: 50,
+  },
+  watermarkCapture: {
+    position: 'absolute',
+    bottom: 5,
+    right: -20,
+    width: 120,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  watermarkCaptureImage: {
+    width: 100,
+    height: 30,
+  },
+  scrollContentContainer: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexGrow: 1,
   },
   promptText: {
     fontSize: 18,
@@ -346,7 +587,7 @@ const styles = StyleSheet.create({
   },
   generatedImage: {
     width: '100%',
-    height: height * 0.45,
+    height: height * 0.65,
   },
   footerContainer: {
     width: '100%',
@@ -401,57 +642,156 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Hidden ViewShot styles for off-screen watermark capture
-  hiddenShareContainer: {
-    position: 'absolute',
-    left: -9999, // Position off-screen
-    top: -9999, // Position off-screen
-    width: 1080, // Match capture width
-    height: 1920, // Full Instagram Story height
-    backgroundColor: '#000000', // Black background for full story
-    overflow: 'hidden',
-    flexDirection: 'column',
-  },
-  sharePromptContainer: {
-    padding: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 120, // Fixed header height
-  },
-  sharePromptText: {
-    fontSize: 20,
-    fontWeight: '600',
+  replyButtonText: {
     color: 'white',
-    textAlign: 'center',
-    lineHeight: 26,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
-  sharePromptTextBlack: {
-    color: 'black',
+  // Interactive Modal Styles
+  interactiveModalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  shareImage: {
-    width: '100%',
-    height: 1680, // Fill remaining space (1920 - 120 header - 120 footer)
-    resizeMode: 'cover',
+  interactiveContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  watermarkContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    width: '100%',
-    height: 120, // Fixed footer height
+  instructionsCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8f9fa',
+    marginHorizontal: 20,
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  watermarkGradient: {
+  instructionsText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#495057',
+    fontWeight: '500',
+  },
+  checkmarkButton: {
+    backgroundColor: '#28a745',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  interactiveContent: {
+    flex: 1,
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  interactiveBackgroundImage: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
+  },
+  stickerContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 50,
+    zIndex: 10,
+  },
+  interactiveSticker: {
+    width: 200,
+    height: 80,
+  },
+  gestureHint: {
+    position: 'absolute',
+    top: -40,
+    left: '50%',
+    transform: [{ translateX: -50 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 20,
+  },
+  gestureHintText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  interactiveCloseButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    padding: 8,
+    zIndex: 30,
+  },
+  // Hidden background capture styles
+  hiddenBackgroundContainer: {
+    position: 'absolute',
+    left: -9999,
+    top: -9999,
+    width: 1080,
+    height: 1920,
+    backgroundColor: '#000',
+  },
+  backgroundImage: {
+    width: '100%',
+    height: 1800,
+    resizeMode: 'cover',
+  },
+  backgroundWatermarkContainer: {
+    position: 'absolute',
+    bottom: 5,
+    right: -30,
+    width: 200,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
   },
-  watermarkLogo: {
-    width: 700,
-    height: 200,
+  backgroundWatermarkLogo: {
+    width: 180,
+    height: 50,
+  },
+  stickerContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 50,
+    zIndex: 10,
+  },
+  interactiveSticker: {
+    width: 200,
+    height: 80,
+  },
+  gestureHint: {
+    position: 'absolute',
+    top: -40,
+    left: '50%',
+    transform: [{ translateX: -50 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 20,
+  },
+  gestureHintText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
