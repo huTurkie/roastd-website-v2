@@ -22,6 +22,7 @@ import {
   useAnimatedProps,
   withSpring,
   withTiming,
+  runOnJS,
 } from 'react-native-reanimated';
 import Animated from 'react-native-reanimated';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -153,6 +154,7 @@ function HomeScreen() {
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
   const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showGestureHints, setShowGestureHints] = useState(true);
 
   const viewShotRef = useRef<ViewShot>(null);
   const shareViewShotRef = useRef<ViewShot>(null);
@@ -164,6 +166,10 @@ function HomeScreen() {
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  // Gesture hint animations
+  const topHintOpacity = useSharedValue(1);
+  const bottomHintOpacity = useSharedValue(1);
+
   const backgroundOptions: Array<BackgroundOption> = [
     { type: 'solid', value: 'rgba(0, 0, 0, 0.2)' },
     { type: 'gradient', value: ['#8a3ab9', '#e95950', '#fccc63'] },
@@ -174,24 +180,50 @@ function HomeScreen() {
   const [bgIndex, setBgIndex] = useState(0);
 
   const pinchGesture = Gesture.Pinch()
+    .onBegin(() => {
+      'worklet';
+      // Hide gesture hints when user starts pinching
+      topHintOpacity.value = withTiming(0, { duration: 300 });
+      bottomHintOpacity.value = withTiming(0, { duration: 300 });
+    })
     .onUpdate((event) => {
+      'worklet';
       scale.value = savedScale.value * event.scale;
     })
     .onEnd(() => {
+      'worklet';
       savedScale.value = scale.value;
+    })
+    .onFinalize(() => {
+      // Hide hints permanently after first interaction (using runOnJS for state update)
+      'worklet';
+      runOnJS(setShowGestureHints)(false);
     });
 
-  const dragGesture = Gesture.Pan()
+  const panGesture = Gesture.Pan()
+    .onBegin(() => {
+      'worklet';
+      // Hide gesture hints when user starts dragging
+      topHintOpacity.value = withTiming(0, { duration: 300 });
+      bottomHintOpacity.value = withTiming(0, { duration: 300 });
+    })
     .onUpdate((event) => {
+      'worklet';
       translateX.value = savedTranslateX.value + event.translationX;
       translateY.value = savedTranslateY.value + event.translationY;
     })
     .onEnd(() => {
+      'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
+    })
+    .onFinalize(() => {
+      // Hide hints permanently after first interaction (using runOnJS for state update)
+      'worklet';
+      runOnJS(setShowGestureHints)(false);
     });
 
-  const composedGesture = Gesture.Simultaneous(dragGesture, pinchGesture);
+  const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
   const animatedProps = useAnimatedProps(() => {
     return {
@@ -212,6 +244,19 @@ function HomeScreen() {
         { translateY: translateY.value },
         { scale: scale.value },
       ],
+    };
+  });
+
+  // Animated styles for gesture hints
+  const topHintStyle = useAnimatedStyle(() => {
+    return {
+      opacity: topHintOpacity.value,
+    };
+  });
+
+  const bottomHintStyle = useAnimatedStyle(() => {
+    return {
+      opacity: bottomHintOpacity.value,
     };
   });
 
@@ -330,16 +375,25 @@ function HomeScreen() {
     console.log(' [handleDicePress] DICE PRESS HANDLING COMPLETE');
   };
 
-  const handleShare = async () => {
-    if (!roastLink) {
-      Alert.alert('No Link!', 'Please upload a photo to generate a link first.');
-      return;
-    }
-
+  const handleSharePress = async () => {
     try {
-      const uri = await captureRef(shareViewShotRef, {
-        format: 'jpg',
-        quality: 0.9,
+      if (!uploadedImageUri) {
+        Alert.alert('Oops!', 'Please upload an image first!');
+        return;
+      }
+
+      // Hide gesture hints before capture
+      setShowGestureHints(false);
+      topHintOpacity.value = withTiming(0, { duration: 200 });
+      bottomHintOpacity.value = withTiming(0, { duration: 200 });
+      
+      // Wait a moment for the animation to complete
+      await new Promise(resolve => setTimeout(resolve, 250));
+
+      // Capture the main ViewShot without forcing dimensions to prevent squashing
+      const uri = await captureRef(viewShotRef, {
+        format: 'png',
+        quality: 1.0,
         result: 'tmpfile',
       });
 
@@ -353,65 +407,39 @@ function HomeScreen() {
         await IntentLauncher.startActivityAsync('com.instagram.share.ADD_TO_STORY', {
           data: contentUri,
           flags: 1,
-          type: 'image/jpeg',
-          extra: {
-            'com.instagram.platform.extra.BACKGROUND_IMAGE': contentUri,
-          },
+          type: 'image/png',
         });
       } else if (Platform.OS === 'ios') {
-        await Clipboard.setStringAsync(roastLink);
+        const base64Image = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        const imageUriBase64 = `data:image/png;base64,${base64Image}`;
 
-        const canOpenInstagram = await Linking.canOpenURL('instagram-stories://share');
+        const shareOptions: any = {
+          social: Share.Social.INSTAGRAM_STORIES,
+          backgroundImage: imageUriBase64,
+        };
 
-        if (canOpenInstagram) {
-          const base64Image = await captureRef(shareViewShotRef, {
-            format: 'jpg',
-            quality: 0.9,
-            result: 'base64',
-          });
-
-          if (!base64Image) {
-            Alert.alert('Oops!', 'Could not capture the image for sharing.');
-            return;
-          }
-
-          const imageUriBase64 = `data:image/jpeg;base64,${base64Image}`;
-
-          const shareOptions: any = {
-            social: Share.Social.INSTAGRAM_STORIES,
-            backgroundImage: imageUriBase64,
-            appId: FACEBOOK_APP_ID,
-          };
-
-          if (Share.shareSingle && Constants.appOwnership !== 'expo') {
-            await Share.shareSingle(shareOptions);
-
-            Alert.alert(
-              'Link Copied!',
-              'Instagram Stories opened! Your roast link is copied to clipboard. Paste it in your story!'
-            );
-          } else if (Constants.appOwnership === 'expo') {
-            Alert.alert(
-              'Instagram Sharing Unavailable',
-              'Instagram Stories sharing is only supported in development builds. Your link has been copied.'
-            );
-            await Clipboard.setStringAsync(roastLink);
-          } else {
-            Alert.alert('Error', 'Sharing functionality is not available.');
-          }
+        if (Share.shareSingle && Constants.appOwnership !== 'expo') {
+          await Share.shareSingle(shareOptions);
+        } else if (Constants.appOwnership === 'expo') {
+          Alert.alert(
+            'Instagram Sharing Unavailable',
+            'Instagram Stories sharing is only supported in development builds.'
+          );
         } else {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'image/jpeg',
-            dialogTitle: 'Share to Instagram Stories',
-          });
+          Alert.alert('Error', 'Sharing functionality is not available.');
         }
+      } else {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Share to Instagram Stories',
+        });
       }
     } catch (error: any) {
       console.error('Sharing error:', error);
       if (error.message.includes('No Activity found to handle Intent')) {
         Alert.alert('Error', 'Could not open Instagram. Please make sure it is installed.');
       } else {
-        Alert.alert('Error', 'An unexpected error occurred during sharing. Please try again.');
+        Alert.alert('Error', 'An unexpected error occurred during sharing.');
       }
     }
   };
@@ -506,24 +534,13 @@ function HomeScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ position: 'absolute', top: -2000, left: -2000 }}>
-        <ShareableView
-          ref={shareViewShotRef}
-          uploadedImageUri={uploadedImageUri}
-          currentPrompt={currentPrompt}
-          background={backgroundOptions[bgIndex]}
-          translateX={translateX}
-          translateY={translateY}
-          scale={scale}
-        />
-      </View>
 
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
         <AppHeader activeTab="play" />
         <View style={styles.content}>
           <View style={styles.cardContainer}>
-            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
+            <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }} style={styles.viewShotContainer}>
               <View style={styles.card}>
                 {uploadedImageUri ? (
                   <Image
@@ -561,6 +578,22 @@ function HomeScreen() {
                     </View>
                   </Animated.View>
                 </GestureDetector>
+                
+                {/* Top Gesture Hint */}
+                {showGestureHints && (
+                  <Animated.View style={[styles.topGestureHint, topHintStyle]}>
+                    <Text style={styles.gestureHintSubText}>Drag to move, pinch to resize</Text>
+                    <Text style={styles.gestureHintText}>Move me 👇</Text>
+                  </Animated.View>
+                )}
+                
+                {/* Bottom Gesture Hint */}
+                {showGestureHints && (
+                  <Animated.View style={[styles.bottomGestureHint, bottomHintStyle]}>
+                    <Text style={styles.gestureHintText}>👆 This is where you will paste your link</Text>
+                    <Text style={styles.gestureHintSubText}>once you have shared it on your story</Text>
+                  </Animated.View>
+                )}
               </View>
             </ViewShot>
 
@@ -603,7 +636,7 @@ function HomeScreen() {
 
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Step 3: Share link on your story</Text>
-            <TouchableOpacity onPress={handleShare}>
+            <TouchableOpacity onPress={handleSharePress}>
               <LinearGradient
                 colors={['#E1306C', '#C13584', '#833AB4']}
                 start={{ x: 0, y: 0 }}
@@ -691,6 +724,9 @@ const styles = StyleSheet.create({
   cardContainer: {
     position: 'relative',
   },
+  viewShotContainer: {
+    backgroundColor: 'transparent',
+  },
   card: {
     backgroundColor: '#8B6F47',
     borderRadius: 20,
@@ -707,6 +743,67 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 20,
+  },
+  watermark: {
+    position: 'absolute',
+    bottom: 5,
+    right: -20,
+    width: 120,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  watermarkImage: {
+    width: 100,
+    height: 30,
+  },
+  topGestureHint: {
+    position: 'absolute',
+    top: 84,
+    left: '50%',
+    transform: [{ translateX: -75 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  bottomGestureHint: {
+    position: 'absolute',
+    bottom: 48,
+    left: '50%',
+    transform: [{ translateX: -64 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+    zIndex: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    maxWidth: 200,
+  },
+  gestureHintText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  gestureHintSubText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
   },
   mainText: {
     fontSize: 24,

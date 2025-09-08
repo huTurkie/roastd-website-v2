@@ -12,7 +12,7 @@ import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
 import StickerCreator, { StickerCreatorRef } from './StickerCreator';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 
 let Share: any;
 if (Constants.appOwnership !== 'expo') {
@@ -65,6 +65,7 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
   const [isCapturingBackground, setIsCapturingBackground] = useState(false);
   const [previewStickerUri, setPreviewStickerUri] = useState<string | null>(null);
   const [showGestureHint, setShowGestureHint] = useState(true);
+  const [showGestureHints, setShowGestureHints] = useState(true);
   const [showInteractiveModal, setShowInteractiveModal] = useState(false);
   const [isCapturingShare, setIsCapturingShare] = useState(false);
 
@@ -72,13 +73,15 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(-50);
   const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
+  const savedTranslateY = useSharedValue(-50);
   
   // Gesture hint animation
   const hintOpacity = useSharedValue(1);
   const hintScale = useSharedValue(1);
+  const topHintOpacity = useSharedValue(1);
+  const bottomHintOpacity = useSharedValue(1);
 
   // Animated styles for sticker - MUST be before conditional logic
   const animatedStickerStyle = useAnimatedStyle(() => {
@@ -110,6 +113,19 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
     };
   });
 
+  // Animated styles for new gesture hints
+  const topHintStyle = useAnimatedStyle(() => {
+    return {
+      opacity: topHintOpacity.value,
+    };
+  });
+
+  const bottomHintStyle = useAnimatedStyle(() => {
+    return {
+      opacity: bottomHintOpacity.value,
+    };
+  });
+
   // Pan gesture for dragging sticker - MUST be before conditional logic
   const panGesture = Gesture.Pan()
     .onBegin(() => {
@@ -117,6 +133,7 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       // Hide gesture hint when user starts interacting
       hintOpacity.value = withSpring(0, { duration: 300 });
       hintScale.value = withSpring(0.8, { duration: 300 });
+      topHintOpacity.value = withTiming(0, { duration: 200 });
     })
     .onUpdate((event) => {
       'worklet';
@@ -127,6 +144,9 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       'worklet';
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
+    })
+    .onFinalize(() => {
+      runOnJS(setShowGestureHints)(false);
     });
 
   // Pinch gesture for scaling sticker - MUST be before conditional logic
@@ -136,6 +156,7 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
       // Hide gesture hint when user starts interacting
       hintOpacity.value = withSpring(0, { duration: 300 });
       hintScale.value = withSpring(0.8, { duration: 300 });
+      topHintOpacity.value = withTiming(0, { duration: 200 });
     })
     .onUpdate((event) => {
       'worklet';
@@ -144,6 +165,9 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
     .onEnd(() => {
       'worklet';
       savedScale.value = scale.value;
+    })
+    .onFinalize(() => {
+      runOnJS(setShowGestureHints)(false);
     });
 
   // Combined gesture - MUST be before conditional logic
@@ -185,6 +209,13 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
 
   const handleInteractiveShare = async () => {
     try {
+      // Hide gesture hints before capture
+      setShowGestureHints(false);
+      topHintOpacity.value = withTiming(0, { duration: 200 });
+      
+      // Wait a moment for the animation to complete
+      await new Promise(resolve => setTimeout(resolve, 250));
+
       // Capture the main ViewShot which includes the positioned prompt
       if (!viewShotRef.current) {
         Alert.alert('Error', 'Cannot capture image. Please try again.');
@@ -392,6 +423,14 @@ export default function MessageDetailModal({ visible, message, onClose }: Messag
                 </View>
               </ViewShot>
 
+              {/* Gesture Hints - Outside ViewShot so they don't get captured */}
+              {showGestureHints && (
+                <Animated.View style={[styles.messageDetailTopHint, topHintStyle]}>
+                  <Text style={styles.messageDetailHintText}>Move me 👇</Text>
+                  <Text style={styles.messageDetailHintSubText}>Drag to move, pinch to resize, tap Reply to share on your story</Text>
+                </Animated.View>
+              )}
+
               <View style={styles.footerContainer}>
               <View style={styles.buttonRow}>
                 {/* Color Cycle Button */}
@@ -488,10 +527,9 @@ const styles = StyleSheet.create({
   },
   promptContainer: {
     position: 'absolute',
-    top: 20,
+    top: '45%',
     left: 20,
     right: 20,
-    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -793,5 +831,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  messageDetailTopHint: {
+    position: 'absolute',
+    top: 68,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    zIndex: 15,
+    alignItems: 'center',
+  },
+  messageDetailHintText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  messageDetailHintSubText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+    opacity: 0.9,
   },
 });
