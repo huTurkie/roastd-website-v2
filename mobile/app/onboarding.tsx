@@ -11,11 +11,11 @@ export default function OnboardingScreen() {
   const [showRegistration, setShowRegistration] = useState(false);
 
   const handleGetStarted = () => {
-    router.push('/platform-selection');
+    router.push('/create-username');
   };
 
   const handleSignIn = () => {
-    setShowRegistration(true);
+    router.push('/complete-registration');
   };
 
   const handleRegistrationComplete = (userInfo: any) => {

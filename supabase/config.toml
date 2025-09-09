@@ -1,3 +1,8 @@
+[auth]
+# Disable email confirmation
+enable_confirmations = false
+enable_signup = true
+
 [functions.nano-banana]
 enabled = true
 verify_jwt = false

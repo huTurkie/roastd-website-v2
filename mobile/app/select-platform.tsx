@@ -1,32 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Dimensions, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Dimensions, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import UserRegistration from '@/components/UserRegistration';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-export default function PlatformSelectionScreen() {
+export default function SelectPlatformScreen() {
   const router = useRouter();
   const [selectedPlatform, setSelectedPlatform] = useState('Instagram');
-  const [showRegistration, setShowRegistration] = useState(false);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleContinue = () => {
-    setShowRegistration(true);
-  };
-
-  const handleRegistrationComplete = (userInfo: any) => {
-    setShowRegistration(false);
-    router.replace('/username-setup');
-  };
-
-  const handleRegistrationCancel = () => {
-    setShowRegistration(false);
+  const handleContinue = async () => {
+    try {
+      // Save platform preference to AsyncStorage
+      await AsyncStorage.setItem('userPlatformPreference', selectedPlatform);
+      
+      // Navigate to age range selection
+      router.push('/choose-age');
+    } catch (error) {
+      console.error('Error saving platform preference:', error);
+      Alert.alert('Error', 'Failed to save platform preference. Please try again.');
+    }
   };
 
   const platforms = [
@@ -106,12 +105,6 @@ export default function PlatformSelectionScreen() {
           </LinearGradient>
         </View>
       </SafeAreaView>
-
-      <UserRegistration
-        visible={showRegistration}
-        onComplete={handleRegistrationComplete}
-        onCancel={handleRegistrationCancel}
-      />
     </View>
   );
 }

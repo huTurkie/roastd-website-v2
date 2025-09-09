@@ -82,8 +82,8 @@ export default function SettingsScreen() {
               setUserInfo(null);
               setNotificationsEnabled(false);
               
-              // Navigate to login/welcome screen
-              router.replace('/');
+              // Navigate to onboarding welcome screen
+              router.replace('/onboarding');
               
               Alert.alert('Success', 'You have been signed out successfully');
             } catch (error) {

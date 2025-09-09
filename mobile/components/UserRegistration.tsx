@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, Keyb
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 
 interface UserRegistrationProps {
   visible: boolean;
@@ -50,11 +51,70 @@ export default function UserRegistration({ visible, onComplete, onCancel }: User
     setLoading(true);
     try {
       if (isSignUp) {
-        // For sign up, save email and navigate to username setup
+        // Sign up with email and password
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+        });
+
+        if (signUpError) {
+          console.error('Sign up error:', signUpError);
+          Alert.alert('Error', signUpError.message || 'Failed to create account. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        if (!authData.user) {
+          Alert.alert('Error', 'Failed to create user account. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Get stored onboarding data from AsyncStorage
+        const storedUsername = await AsyncStorage.getItem('userUsername');
+        const storedPlatform = await AsyncStorage.getItem('userPlatformPreference');
+        const storedAgeRange = await AsyncStorage.getItem('userAgeRange');
+
+        // Create complete profile with all collected data
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            username: storedUsername,
+            email: email,
+            platform_preference: storedPlatform,
+            age_range: storedAgeRange,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          Alert.alert('Error', 'Failed to save profile. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Clear temporary storage
+        await AsyncStorage.multiRemove(['userUsername', 'userPlatformPreference', 'userAgeRange']);
+        
+        // Save email to AsyncStorage
         await AsyncStorage.setItem('userEmail', email);
-        onComplete('', email); // Pass empty username for now
+        onComplete('', email);
       } else {
-        // For sign in, authenticate user (TODO: implement actual auth)
+        // Sign in with existing credentials
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (signInError) {
+          console.error('Sign in error:', signInError);
+          Alert.alert('Error', signInError.message || 'Failed to sign in. Please check your credentials.');
+          setLoading(false);
+          return;
+        }
+
         await AsyncStorage.setItem('userEmail', email);
         onComplete('', email);
       }
