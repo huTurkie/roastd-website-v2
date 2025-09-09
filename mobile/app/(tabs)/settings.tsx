@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import AppHeader from '@/components/AppHeader';
 import UserRegistration from '@/components/UserRegistration';
 import { getUserInfo, isUserRegistered, clearUserInfo, UserInfo } from '../../lib/userHelpers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../../lib/supabase';
 
 export default function SettingsScreen() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -55,6 +58,42 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('Error updating notification settings:', error);
     }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out? You will need to log in again to access your account.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Sign out from Supabase
+              await supabase.auth.signOut();
+              
+              // Clear local user data
+              await clearUserInfo();
+              await AsyncStorage.clear();
+              
+              // Reset state
+              setUserInfo(null);
+              setNotificationsEnabled(false);
+              
+              // Navigate to login/welcome screen
+              router.replace('/');
+              
+              Alert.alert('Success', 'You have been signed out successfully');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleClearData = () => {
@@ -135,6 +174,14 @@ export default function SettingsScreen() {
               value={notificationsEnabled}
             />
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -306,5 +353,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
+  },
+  signOutButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signOutButtonText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 10,
   },
 });
