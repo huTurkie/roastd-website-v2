@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 
@@ -14,7 +14,11 @@ export default function AppHeader({ activeTab }: AppHeaderProps) {
     <View style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="eye-outline" size={28} color="#BDBDBD" />
+          <Image 
+            source={require('../assets/images/logo6.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.headerCenter}>
           <TouchableOpacity onPress={() => router.push('/')}>
@@ -22,7 +26,7 @@ export default function AppHeader({ activeTab }: AppHeaderProps) {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/inbox')} style={styles.inboxButton}>
             <Text style={[styles.tabText, activeTab === 'inbox' && styles.activeTabText]}>INBOX</Text>
-            {activeTab === 'inbox' && <View style={styles.redDot} />}
+            <View style={styles.redDot} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
@@ -50,7 +54,8 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   headerCenter: {
     flexDirection: 'row',
@@ -81,6 +86,13 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#ff4757',
-    marginLeft: 4,
+    position: 'absolute',
+    top: 0,
+    right: 2,
+  },
+  logoImage: {
+    width: 72,
+    height: 72,
+    marginTop: 7,
   },
 });

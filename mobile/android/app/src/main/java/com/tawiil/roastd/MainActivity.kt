@@ -1,4 +1,4 @@
-package com.anonymous.roastd
+package com.tawiil.roastd
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

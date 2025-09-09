@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.roastd",
+      "bundleIdentifier": "com.tawiil.roastd",
       "infoPlist": {
         "LSApplicationQueriesSchemes": ["instagram-stories"]
       }
@@ -21,7 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.roastd",
+      "package": "com.tawiil.roastd",
       "queries": []
     },
     "web": {

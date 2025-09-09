@@ -11,20 +11,22 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { pickImage, uploadPhoto, createRoastSession, generateLinkCode, updateRoastPrompt, generateAIImage } from '../../lib/uploadHelpers';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
+import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedProps,
   withSpring,
   withTiming,
   runOnJS,
+  interpolate,
+  Extrapolate
 } from 'react-native-reanimated';
-import Animated from 'react-native-reanimated';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system';
@@ -33,7 +35,6 @@ import * as Linking from 'expo-linking';
 import * as Sharing from 'expo-sharing';
 import { NativeModules } from 'react-native';
 import Constants from 'expo-constants';
-import { Link } from 'expo-router';
 import AppHeader from '@/components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UserRegistration from '@/components/UserRegistration';
@@ -416,6 +417,7 @@ function HomeScreen() {
         const shareOptions: any = {
           social: Share.Social.INSTAGRAM_STORIES,
           backgroundImage: imageUriBase64,
+          appId: FACEBOOK_APP_ID,
         };
 
         if (Share.shareSingle && Constants.appOwnership !== 'expo') {
@@ -719,7 +721,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 0 : 0, // Remove extra iOS padding
+    paddingTop: Platform.OS === 'ios' ? 0 : 15, // Add Android-specific top padding
   },
   cardContainer: {
     position: 'relative',
@@ -733,7 +735,7 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 380, // Increased height
+    minHeight: 410, // Increased by additional ~0.05 inch (5 pixels)
     position: 'relative',
   },
   uploadedImage: {
@@ -852,12 +854,12 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   dotsContainer: {
-    marginVertical: 10,
+    marginVertical: 5,
   },
   stepContainer: {
     width: '100%',
     paddingHorizontal: 20,
-    marginVertical: 10, // Reduced vertical margin
+    marginVertical: 5, // Further reduced vertical margin
   },
   stepTitle: {
     fontSize: 16,

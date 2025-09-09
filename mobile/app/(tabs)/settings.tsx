@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '@/components/AppHeader';
 import UserRegistration from '@/components/UserRegistration';
 import { getUserInfo, isUserRegistered, clearUserInfo, UserInfo } from '../../lib/userHelpers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showUserRegistration, setShowUserRegistration] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -22,11 +24,37 @@ export default function SettingsScreen() {
       }
     };
 
+    const loadNotificationSettings = async () => {
+      try {
+        const notificationState = await AsyncStorage.getItem('notificationsEnabled');
+        setNotificationsEnabled(notificationState === 'true');
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
+    };
+
     loadUserInfo();
+    loadNotificationSettings();
   }, []);
 
   const handleEditProfile = () => {
     setShowUserRegistration(true);
+  };
+
+  const toggleNotifications = async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem('notificationsEnabled', value.toString());
+      setNotificationsEnabled(value);
+      
+      if (value) {
+        Alert.alert(
+          'Notifications Enabled',
+          'You will receive notifications for new messages. You can manage notification permissions in your device settings.'
+        );
+      }
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+    }
   };
 
   const handleClearData = () => {
@@ -87,6 +115,26 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={styles.notificationCard}>
+            <View style={styles.notificationInfo}>
+              <Ionicons name="notifications-outline" size={20} color="#666" />
+              <View style={styles.notificationText}>
+                <Text style={styles.notificationLabel}>Push Notifications</Text>
+                <Text style={styles.notificationDescription}>Get notified when you receive new messages</Text>
+              </View>
+            </View>
+            <Switch
+              trackColor={{ false: '#E9E9EA', true: '#F14060' }}
+              thumbColor={'#fff'}
+              ios_backgroundColor="#E9E9EA"
+              onValueChange={toggleNotifications}
+              value={notificationsEnabled}
+            />
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -226,5 +274,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 10,
+  },
+  notificationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  notificationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  notificationText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  notificationLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  notificationDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
 });

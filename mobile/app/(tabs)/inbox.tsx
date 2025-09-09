@@ -20,6 +20,7 @@ import AppHeader from '@/components/AppHeader';
 import UserRegistration from '@/components/UserRegistration';
 import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
 import MessageDetailModal from '@/components/MessageDetailModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface InboxMessage {
   id: string;
@@ -32,6 +33,7 @@ interface InboxMessage {
   link_code?: string;
   roast_prompt?: string;
   updated_prompt?: string;
+  is_read?: boolean;
 }
 
 export default function InboxScreen() {
@@ -44,7 +46,21 @@ export default function InboxScreen() {
   const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  const toggleSwitch = () => setNotificationsEnabled(previousState => !previousState);
+  const toggleSwitch = async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem('notificationsEnabled', value.toString());
+      setNotificationsEnabled(value);
+      
+      if (value) {
+        Alert.alert(
+          'Notifications Enabled',
+          'You will receive notifications for new messages. You can manage notification permissions in your device settings.'
+        );
+      }
+    } catch (error) {
+      console.error('Error updating notification settings:', error);
+    }
+  };
 
   // Demo message that should always be present
   const demoMessage: InboxMessage = {
@@ -55,6 +71,7 @@ export default function InboxScreen() {
     user_id: 'demo-user',
     original_photo_url: 'https://placehold.co/600x400/png',
     generated_photo_url: 'https://placehold.co/600x400/png',
+    is_read: false,
   };
 
   const fetchMessages = async () => {
@@ -103,7 +120,8 @@ export default function InboxScreen() {
         generated_photo_url: inboxRecord.ai_image_url || inboxRecord.generated_photo_url || 'https://placehold.co/600x400/png',
         link_code: inboxRecord.recipient_identifier, // Using recipient_identifier as link reference
         roast_prompt: inboxRecord.prompt,
-        updated_prompt: inboxRecord.prompt
+        updated_prompt: inboxRecord.prompt,
+        is_read: false // Default to unread for new messages
       }));
       
       // Always include demo message first, then add real messages
@@ -148,6 +166,12 @@ export default function InboxScreen() {
   };
 
   const handleMessagePress = (message: InboxMessage) => {
+    // Mark message as read when opened
+    setMessages(prevMessages => 
+      prevMessages.map(msg => 
+        msg.id === message.id ? { ...msg, is_read: true } : msg
+      )
+    );
     setSelectedMessage(message);
     setModalVisible(true);
   };
@@ -169,7 +193,17 @@ export default function InboxScreen() {
       }
     };
 
+    const loadNotificationSettings = async () => {
+      try {
+        const notificationState = await AsyncStorage.getItem('notificationsEnabled');
+        setNotificationsEnabled(notificationState === 'true');
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
+    };
+
     checkUserAndFetch();
+    loadNotificationSettings();
   }, []);
 
   useEffect(() => {
@@ -184,12 +218,13 @@ export default function InboxScreen() {
       onPress={() => handleMessagePress(item)}
     >
       <View style={styles.iconContainer}>
-        <LinearGradient
-          colors={['#FF6B6B', '#F14060']}
-          style={styles.messageIcon}
-        >
-          <Ionicons name="heart-outline" size={32} color="white" />
-        </LinearGradient>
+        <View style={[styles.messageIcon, { backgroundColor: item.is_read ? '#f0f0f0' : '#FF4444' }]}>
+          <Ionicons 
+            name="mail" 
+            size={32} 
+            color={item.is_read ? "white" : "white"} 
+          />
+        </View>
       </View>
       <View style={styles.messageContent}>
         <Text style={styles.messageTitle}>
@@ -201,21 +236,28 @@ export default function InboxScreen() {
     </TouchableOpacity>
   );
 
-  const ListHeader = () => (
-    <View style={styles.notificationsCard}>
-      <View>
-        <Text style={styles.notificationsTitle}>Turn on Notifications 🔔</Text>
-        <Text style={styles.notificationsSubtitle}>Get notified when you get new messages</Text>
+  const ListHeader = () => {
+    // Only show notifications card if notifications are disabled
+    if (notificationsEnabled) {
+      return null;
+    }
+
+    return (
+      <View style={styles.notificationsCard}>
+        <View>
+          <Text style={styles.notificationsTitle}>Turn on Notifications 🔔</Text>
+          <Text style={styles.notificationsSubtitle}>Get notified when you get new messages</Text>
+        </View>
+        <Switch
+          trackColor={{ false: '#E9E9EA', true: '#F14060' }}
+          thumbColor={'#fff'}
+          ios_backgroundColor="#E9E9EA"
+          onValueChange={toggleSwitch}
+          value={notificationsEnabled}
+        />
       </View>
-      <Switch
-        trackColor={{ false: '#E9E9EA', true: '#F14060' }}
-        thumbColor={'#fff'}
-        ios_backgroundColor="#E9E9EA"
-        onValueChange={toggleSwitch}
-        value={notificationsEnabled}
-      />
-    </View>
-  );
+    );
+  };
 
   const EmptyState = () => (
     <View style={styles.emptyState}>
@@ -282,6 +324,38 @@ export default function InboxScreen() {
         message={selectedMessage}
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
+        onDeleteMessage={(messageId) => {
+          // Prevent deletion of demo message
+          if (messageId === 'demo-1') {
+            console.log('⚠️ Cannot delete demo message');
+            return;
+          }
+          // Remove message from local state and ensure demo message is preserved
+          setMessages(prevMessages => {
+            const filteredMessages = prevMessages.filter(msg => msg.id !== messageId);
+            // Always ensure demo message is present
+            const hasDemo = filteredMessages.some(msg => msg.id === 'demo-1');
+            if (!hasDemo) {
+              const demoMessage: InboxMessage = {
+                id: 'demo-1',
+                prompt: 'Swap their outfit with someone famous 🔥',
+                roast: 'This is a demo roast message.',
+                created_at: new Date().toISOString(),
+                user_id: 'demo-user',
+                original_photo_url: 'https://placehold.co/600x400/png',
+                generated_photo_url: 'https://placehold.co/600x400/png',
+                is_read: false,
+              };
+              return [demoMessage, ...filteredMessages];
+            }
+            return filteredMessages;
+          });
+          console.log('🗑️ Message deleted:', messageId);
+        }}
+        onReportMessage={(messageId) => {
+          console.log('🚩 Message reported:', messageId);
+          // Could implement server-side reporting here
+        }}
       />
       
       <UserRegistration

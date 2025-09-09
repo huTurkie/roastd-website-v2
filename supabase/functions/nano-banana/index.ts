@@ -120,7 +120,30 @@ serve(async (req) => {
         role: "user",
         parts: [
           {
-            text: `Look at this image and ${prompt}. Create a completely new image that transforms the person in the photo according to this description. Generate an entirely new artistic image, not just text.`
+            text: `Look at this image and ${prompt}. Create a completely new PHOTOREALISTIC image that transforms the person in the photo according to this description. Generate an entirely new realistic image, not just text.
+
+MANDATORY PHOTOREALISTIC REQUIREMENTS:
+- Generate a PHOTOREALISTIC, NATURAL-LOOKING image - NOT a cartoon, illustration, or animated style
+- PRESERVE exact facial features, bone structure, and natural human proportions
+- MAINTAIN the original person's realistic skin texture, eye color, and facial characteristics  
+- USE realistic lighting, shadows, and natural photography aesthetics
+- KEEP all human features looking like real people, not drawings or cartoons
+- APPLY only the specific transformation requested while maintaining photographic realism
+- ABSOLUTELY NO cartoon, anime, illustration, or artistic stylization unless explicitly requested
+- The result must look like a real photograph of a real person
+
+STYLE ENFORCEMENT:
+- Style: Photorealistic photography
+- Quality: High-resolution, natural lighting
+- Appearance: Real human features, not illustrated or cartoon-like
+- Texture: Natural skin, hair, and clothing textures
+
+IMPORTANT: Generate the image with these exact dimensions:
+- Width: 1080px
+- Height: 1920px  
+- Aspect Ratio: 9:16 (Instagram Stories format)
+
+The image must be optimized for Instagram Stories sharing without any stretching or cropping.`
           },
           {
             inline_data: {
