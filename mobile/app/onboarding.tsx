@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import UserRegistration from '@/components/UserRegistration';
 
 const { width, height } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [showRegistration, setShowRegistration] = useState(false);
 
   const handleGetStarted = () => {
     router.push('/create-username');
@@ -18,14 +16,6 @@ export default function OnboardingScreen() {
     router.push('/complete-registration');
   };
 
-  const handleRegistrationComplete = (userInfo: any) => {
-    setShowRegistration(false);
-    router.replace('/(tabs)');
-  };
-
-  const handleRegistrationCancel = () => {
-    setShowRegistration(false);
-  };
 
   return (
     <LinearGradient
@@ -70,11 +60,6 @@ export default function OnboardingScreen() {
         </View>
       </SafeAreaView>
 
-      <UserRegistration
-        visible={showRegistration}
-        onComplete={handleRegistrationComplete}
-        onCancel={handleRegistrationCancel}
-      />
     </LinearGradient>
   );
 }

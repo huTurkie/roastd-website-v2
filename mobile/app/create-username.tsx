@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Aler
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../lib/supabase';
 
 export default function CreateUsernameScreen() {
   const router = useRouter();
@@ -21,6 +22,26 @@ export default function CreateUsernameScreen() {
 
     setLoading(true);
     try {
+      // Check if username already exists in the database
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Username check error:', checkError);
+        Alert.alert('Error', 'Failed to verify username availability. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (existingUser) {
+        Alert.alert('Username Taken', 'This username is already taken. Please choose a different username.');
+        setLoading(false);
+        return;
+      }
+
       // Clear any existing onboarding data to start fresh
       await AsyncStorage.multiRemove(['userAgeRange', 'userPlatformPreference']);
       

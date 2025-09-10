@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Switch, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AppHeader from '@/components/AppHeader';
-import UserRegistration from '@/components/UserRegistration';
-import { getUserInfo, isUserRegistered, clearUserInfo, UserInfo } from '../../lib/userHelpers';
+import { getUserInfo, isUserRegistered, clearUserInfo, UserInfo, saveUserInfo } from '../../lib/userHelpers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 
 export default function SettingsScreen() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedUsername, setEditedUsername] = useState('');
+  const [editedEmail, setEditedEmail] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -41,7 +42,95 @@ export default function SettingsScreen() {
   }, []);
 
   const handleEditProfile = () => {
-    setShowUserRegistration(true);
+    if (userInfo) {
+      setEditedUsername(userInfo.username);
+      setEditedEmail(userInfo.email);
+      setIsEditingProfile(true);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editedUsername.trim() || !editedEmail.trim()) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    if (editedUsername.length < 3 || editedUsername.length > 20) {
+      Alert.alert('Error', 'Username must be between 3 and 20 characters.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editedEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'User not authenticated.');
+        return;
+      }
+
+      // Check if username is being changed and if it already exists
+      if (editedUsername !== userInfo?.username) {
+        const { data: existingUser, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', editedUsername)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Username check error:', checkError);
+          Alert.alert('Error', 'Failed to verify username availability. Please try again.');
+          return;
+        }
+
+        if (existingUser) {
+          Alert.alert('Username Taken', 'This username is already taken. Please choose a different username.');
+          return;
+        }
+      }
+
+      // Update profile in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: editedUsername,
+          email: editedEmail,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Profile update error:', error);
+        if (error.code === '23505') {
+          Alert.alert('Username Taken', 'This username is already taken. Please choose a different username.');
+        } else {
+          Alert.alert('Error', 'Failed to update profile. Please try again.');
+        }
+        return;
+      }
+
+      // Update local storage
+      await saveUserInfo(editedUsername, editedEmail);
+      
+      // Update local state
+      setUserInfo({ username: editedUsername, email: editedEmail });
+      setIsEditingProfile(false);
+      
+      Alert.alert('Success', 'Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditedUsername('');
+    setEditedEmail('');
   };
 
   const toggleNotifications = async (value: boolean) => {
@@ -130,7 +219,16 @@ export default function SettingsScreen() {
                 <Ionicons name="person-outline" size={20} color="#666" />
                 <View style={styles.userInfoText}>
                   <Text style={styles.userInfoLabel}>Username</Text>
-                  <Text style={styles.userInfoValue}>{userInfo.username}</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.editInput}
+                      value={editedUsername}
+                      onChangeText={setEditedUsername}
+                      placeholder="Enter username"
+                    />
+                  ) : (
+                    <Text style={styles.userInfoValue}>{userInfo.username}</Text>
+                  )}
                 </View>
               </View>
               
@@ -138,13 +236,35 @@ export default function SettingsScreen() {
                 <Ionicons name="mail-outline" size={20} color="#666" />
                 <View style={styles.userInfoText}>
                   <Text style={styles.userInfoLabel}>Email</Text>
-                  <Text style={styles.userInfoValue}>{userInfo.email}</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.editInput}
+                      value={editedEmail}
+                      onChangeText={setEditedEmail}
+                      placeholder="Enter email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  ) : (
+                    <Text style={styles.userInfoValue}>{userInfo.email}</Text>
+                  )}
                 </View>
               </View>
               
-              <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
+              {isEditingProfile ? (
+                <View style={styles.editActions}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+                  <Text style={styles.editButtonText}>Edit Profile</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View style={styles.noUserCard}>
@@ -192,18 +312,6 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      <UserRegistration
-        visible={showUserRegistration}
-        onComplete={async (newUserInfo) => {
-          setUserInfo(newUserInfo);
-          setShowUserRegistration(false);
-          console.log('👤 User profile updated:', newUserInfo);
-        }}
-        onCancel={() => {
-          setShowUserRegistration(false);
-        }}
-      />
     </SafeAreaView>
   );
 }
@@ -272,6 +380,45 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   editButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    backgroundColor: '#F8F8F8',
+    marginTop: 4,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F0F0F0',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

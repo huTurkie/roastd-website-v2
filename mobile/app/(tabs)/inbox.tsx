@@ -17,7 +17,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import AppHeader from '@/components/AppHeader';
-import UserRegistration from '@/components/UserRegistration';
 import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
 import MessageDetailModal from '@/components/MessageDetailModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -43,7 +42,6 @@ export default function InboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   const toggleSwitch = async (value: boolean) => {
@@ -76,7 +74,7 @@ export default function InboxScreen() {
 
   const fetchMessages = async () => {
     try {
-      console.log('📬 Fetching messages from Supabase inbox table...');
+      console.log('📬 Fetching AI-generated messages from roast_sessions table...');
 
       if (!userInfo) {
         console.log('⚠️ No user info available, showing demo message only');
@@ -84,14 +82,12 @@ export default function InboxScreen() {
         return;
       }
 
-      // Fetch AI-generated messages from inbox table filtered by user
+      // Fetch AI-generated messages from roast_sessions table where ai_image_url is not null
       const { data, error } = await supabase
-        .from('inbox')
-        .select(`
-          *,
-          roast_sessions!inner(username, creator_email)
-        `)
-        .eq('roast_sessions.username', userInfo.username)
+        .from('roast_sessions')
+        .select('*')
+        .eq('creator_email', userInfo.email)
+        .not('ai_image_url', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -102,25 +98,25 @@ export default function InboxScreen() {
         return;
       }
 
-      console.log('📬 Fetched inbox messages from Supabase:', data?.length || 0);
+      console.log('📬 Fetched AI-generated sessions from Supabase:', data?.length || 0);
       
-      // All inbox records are AI-processed by definition (inserted by nano-banana function)
+      // All records with ai_image_url are AI-processed sessions
       const processedMessages = data || [];
       
-      console.log('🤖 AI-processed inbox messages:', processedMessages.length);
+      console.log('🤖 AI-processed roast sessions:', processedMessages.length);
       
-      // Map inbox data to InboxMessage format
-      const mappedMessages: InboxMessage[] = processedMessages.map(inboxRecord => ({
-        id: inboxRecord.id.toString(),
-        prompt: inboxRecord.prompt || 'New AI roast request',
+      // Map roast_sessions data to InboxMessage format
+      const mappedMessages: InboxMessage[] = processedMessages.map(sessionRecord => ({
+        id: sessionRecord.session_id.toString(),
+        prompt: sessionRecord.updated_prompt || sessionRecord.roast_prompt || 'AI roast generated from your photo!',
         roast: 'AI roast generated!', // These are AI-generated images
-        created_at: inboxRecord.created_at,
-        user_id: inboxRecord.user_id || 'anonymous',
-        original_photo_url: inboxRecord.original_photo_url || 'https://placehold.co/600x400/png',
-        generated_photo_url: inboxRecord.ai_image_url || inboxRecord.generated_photo_url || 'https://placehold.co/600x400/png',
-        link_code: inboxRecord.recipient_identifier, // Using recipient_identifier as link reference
-        roast_prompt: inboxRecord.prompt,
-        updated_prompt: inboxRecord.prompt,
+        created_at: sessionRecord.created_at,
+        user_id: sessionRecord.creator_email || sessionRecord.username || 'anonymous',
+        original_photo_url: sessionRecord.original_photo_url || 'https://placehold.co/600x400/png',
+        generated_photo_url: sessionRecord.ai_image_url || sessionRecord.generated_photo_url || 'https://placehold.co/600x400/png',
+        link_code: sessionRecord.link_code,
+        roast_prompt: sessionRecord.roast_prompt || 'AI-generated roast',
+        updated_prompt: sessionRecord.updated_prompt || sessionRecord.roast_prompt || 'AI-generated roast',
         is_read: false // Default to unread for new messages
       }));
       
@@ -181,7 +177,7 @@ export default function InboxScreen() {
       try {
         const registered = await isUserRegistered();
         if (!registered) {
-          setShowUserRegistration(true);
+          router.push('/complete-registration');
         } else {
           const user = await getUserInfo();
           setUserInfo(user);
@@ -189,7 +185,7 @@ export default function InboxScreen() {
         }
       } catch (error) {
         console.error('Error checking user registration:', error);
-        setShowUserRegistration(true);
+        router.push('/complete-registration');
       }
     };
 
@@ -278,17 +274,6 @@ export default function InboxScreen() {
           </View>
         </SafeAreaView>
         
-        <UserRegistration
-          visible={showUserRegistration}
-          onComplete={async (userInfo) => {
-            setUserInfo(userInfo);
-            setShowUserRegistration(false);
-            console.log('👤 User registration completed in inbox:', userInfo);
-          }}
-          onCancel={() => {
-            setShowUserRegistration(false);
-          }}
-        />
       </>
     );
   }
@@ -358,17 +343,6 @@ export default function InboxScreen() {
         }}
       />
       
-      <UserRegistration
-        visible={showUserRegistration}
-        onComplete={async (userInfo) => {
-          setUserInfo(userInfo);
-          setShowUserRegistration(false);
-          console.log('👤 User registration completed in inbox:', userInfo);
-        }}
-        onCancel={() => {
-          setShowUserRegistration(false);
-        }}
-      />
     </SafeAreaView>
   );
 }

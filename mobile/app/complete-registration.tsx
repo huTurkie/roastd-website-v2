@@ -1,10 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Modal, Image } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+
+const GoogleLogo = () => (
+  <Svg width="20" height="20" viewBox="0 0 24 24">
+    <Path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <Path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <Path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <Path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </Svg>
+);
 
 export default function CompleteRegistrationScreen() {
   const router = useRouter();
@@ -17,9 +39,17 @@ export default function CompleteRegistrationScreen() {
     router.back();
   };
 
-  const handleSocialLogin = (provider: 'google' | 'apple') => {
-    // TODO: Implement social login
-    Alert.alert('Coming Soon', `${provider === 'google' ? 'Google' : 'Apple'} sign-in will be available soon!`);
+  const handleSocialLogin = (provider: string) => {
+    Alert.alert('Social Login', `${provider} login will be implemented soon!`);
+  };
+
+  const handleLinkPress = (type: 'terms' | 'privacy') => {
+    // Placeholder for future external link navigation
+    Alert.alert('Coming Soon', `${type === 'terms' ? 'Terms of Service' : 'Privacy Policy'} will open in browser soon!`);
+  };
+
+  const handleForgotPassword = () => {
+    router.push('/forgot-password');
   };
 
   const handleSubmit = async () => {
@@ -43,34 +73,38 @@ export default function CompleteRegistrationScreen() {
       let authResult;
       
       if (isSignUp) {
-        // Sign up new user without email confirmation
+        // Sign up new user
         authResult = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            emailRedirectTo: undefined,
-            data: {
-              email_confirm: false
-            }
-          }
+        }, {
+          emailRedirectTo: undefined,
         });
         
-        // If signup requires confirmation, auto-confirm the user
-        if (authResult.data.user && !authResult.data.user.email_confirmed_at) {
-          console.log('Auto-confirming user email...');
+        // Handle sign up errors
+        if (authResult.error) {
+          if (authResult.error.message.includes('already registered') || 
+              authResult.error.message.includes('User already registered')) {
+            Alert.alert(
+              'Account Already Exists',
+              'An account with this email already exists. Please use Sign In instead.',
+              [
+                {
+                  text: 'Switch to Sign In',
+                  onPress: () => setIsSignUp(false)
+                }
+              ]
+            );
+            return;
+          }
         }
+        
       } else {
         // Sign in existing user
         authResult = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        
-        // If sign in fails due to confirmation, show helpful message
-        if (authResult.error && authResult.error.message.includes('email not confirmed')) {
-          Alert.alert('Account Not Ready', 'Your account was created but needs to be activated. Please try signing up again or contact support.');
-          return;
-        }
         
         // For sign in, get user info from Supabase profiles table
         if (authResult.data.user) {
@@ -84,6 +118,10 @@ export default function CompleteRegistrationScreen() {
             // Save profile info to AsyncStorage for settings page
             await AsyncStorage.setItem('user_username', profile.username || '');
             await AsyncStorage.setItem('user_email', profile.email || email);
+            console.log('Sign-in: Profile data saved to AsyncStorage:', { username: profile.username, email: profile.email });
+          } else {
+            console.log('Sign-in: No profile found, saving email only');
+            await AsyncStorage.setItem('user_email', email);
           }
         }
       }
@@ -96,6 +134,24 @@ export default function CompleteRegistrationScreen() {
       if (isSignUp && authResult.data.user) {
         // Wait a moment for auth to fully complete
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Check if username already exists
+        const { data: existingUser, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Username check error:', checkError);
+          Alert.alert('Error', 'Failed to verify username availability. Please try again.');
+          return;
+        }
+
+        if (existingUser) {
+          Alert.alert('Username Taken', 'This username is already taken. Please choose a different username and try again.');
+          return;
+        }
         
         // Create user profile with onboarding data using service role
         const { error: profileError } = await supabase
@@ -110,7 +166,30 @@ export default function CompleteRegistrationScreen() {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          // Check if it's a unique constraint violation
+          if (profileError.code === '23505') {
+            console.error('Username already taken:', profileError.message);
+            Alert.alert('Username Taken', 'This username is already taken. Please choose a different username and try again.');
+            return;
+          } else if (profileError.code === '23503') {
+            // Foreign key constraint violation - user exists but not in auth table
+            // This is expected when user already exists, so don't log as error
+            console.log('User account already exists, redirecting to sign in');
+            Alert.alert(
+              'Account Already Exists',
+              'An account with this email already exists. Please use Sign In instead.',
+              [
+                {
+                  text: 'Switch to Sign In',
+                  onPress: () => setIsSignUp(false)
+                }
+              ]
+            );
+            return;
+          } else {
+            console.error('Profile creation error:', profileError);
+          }
+          
           // Try without RLS check - use upsert instead
           const { error: upsertError } = await supabase
             .from('profiles')
@@ -126,8 +205,27 @@ export default function CompleteRegistrationScreen() {
             });
           
           if (upsertError) {
-            console.error('Profile upsert error:', upsertError);
-            Alert.alert('Profile Error', 'Failed to create user profile. Please try again.');
+            if (upsertError.code === '23505') {
+              console.error('Username already taken:', upsertError.message);
+              Alert.alert('Username Taken', 'This username is already taken. Please choose a different username and try again.');
+            } else if (upsertError.code === '23503') {
+              // Foreign key constraint violation - user exists but not in auth table
+              // This is expected when user already exists, so don't log as error
+              console.log('User account already exists during upsert, redirecting to sign in');
+              Alert.alert(
+                'Account Already Exists',
+                'An account with this email already exists. Please use Sign In instead.',
+                [
+                  {
+                    text: 'Switch to Sign In',
+                    onPress: () => setIsSignUp(false)
+                  }
+                ]
+              );
+            } else {
+              console.error('Profile upsert error:', upsertError);
+              Alert.alert('Profile Error', 'Failed to create user profile. Please try again.');
+            }
             return;
           }
         }
@@ -137,9 +235,13 @@ export default function CompleteRegistrationScreen() {
       if (isSignUp) {
         await AsyncStorage.setItem('user_username', username || '');
         await AsyncStorage.setItem('user_email', email);
+        console.log('Sign-up: User data saved to AsyncStorage:', { username, email });
         
         // Clear onboarding data
         await AsyncStorage.multiRemove(['userUsername', 'userPlatformPreference', 'userAgeRange']);
+      } else {
+        // For sign in, ensure we have the user data saved
+        console.log('Sign-in: User authenticated successfully');
       }
       
       // Navigate to main app
@@ -250,6 +352,13 @@ export default function CompleteRegistrationScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
+            {/* Forgot Password Link - Only show for Sign In */}
+            {!isSignUp && (
+              <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordContainer}>
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
             {/* Divider */}
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
@@ -258,20 +367,34 @@ export default function CompleteRegistrationScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.socialButton}
+              style={styles.socialButtonRounded}
               onPress={() => handleSocialLogin('google')}
             >
-              <Ionicons name="logo-google" size={20} color="#4285F4" />
-              <Text style={styles.socialButtonText}>Sign in with Google</Text>
+              <GoogleLogo />
+              <Text style={styles.socialButtonTextRounded}>Continue with Google</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.socialButton}
+              style={styles.socialButtonRounded}
               onPress={() => handleSocialLogin('apple')}
             >
               <Ionicons name="logo-apple" size={20} color="#000" />
-              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+              <Text style={styles.socialButtonTextRounded}>Continue with Apple</Text>
             </TouchableOpacity>
+
+            {/* Terms and Privacy Footer */}
+            {isSignUp && (
+              <Text style={styles.termsText}>
+                By continuing you agree to our{' '}
+                <Text style={styles.linkText} onPress={() => handleLinkPress('terms')}>
+                  terms of service
+                </Text>
+                {' '}and{' '}
+                <Text style={styles.linkText} onPress={() => handleLinkPress('privacy')}>
+                  privacy policy
+                </Text>
+              </Text>
+            )}
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -359,6 +482,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
+  socialButtonRounded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  socialButtonTextRounded: {
+    marginLeft: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -411,5 +552,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  termsText: {
+    fontSize: 10,
+    color: '#b8c6db',
+    textAlign: 'center',
+    marginTop: 20,
+    marginHorizontal: 20,
+    lineHeight: 14,
+  },
+  linkText: {
+    fontSize: 10,
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  forgotPasswordText: {
+    fontSize: 12,
+    color: '#007AFF',
+    textDecorationLine: 'underline',
   },
 });

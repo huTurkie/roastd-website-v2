@@ -1,6 +1,4 @@
 [auth]
-# Disable email confirmation
-enable_confirmations = false
 enable_signup = true
 
 [functions.nano-banana]

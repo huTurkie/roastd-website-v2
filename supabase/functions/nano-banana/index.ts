@@ -48,12 +48,13 @@ serve(async (req) => {
     // Use .maybeSingle() instead of .single() for better error handling
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('roast_sessions')
-      .select('session_id, original_photo_url')
+      .select('session_id, original_photo_url, creator_email, username')
       .eq('link_code', link_code)
       .maybeSingle()
 
     console.log('🔍 [nano-banana] DEBUG: Session query results:', sessionData);
     console.log('🔍 [nano-banana] DEBUG: Session query error:', sessionError);
+    console.log('🔍 [nano-banana] DEBUG: Querying for link_code:', link_code);
 
     if (sessionError) {
       console.error('❌ [nano-banana] Database error retrieving session:', sessionError);
@@ -300,11 +301,16 @@ The image must be optimized for Instagram Stories sharing without any stretching
     // Insert into inbox for mobile app
     console.log('🔥 [nano-banana] STEP 16: Inserting into inbox for mobile app display');
     
+    console.log('🔍 [nano-banana] DEBUG: Session data retrieved:', sessionData);
+    console.log('🔍 [nano-banana] DEBUG: creator_email:', sessionData.creator_email);
+    console.log('🔍 [nano-banana] DEBUG: username:', sessionData.username);
+    
     const inboxInsertData = {
-      user_id: sessionData.creator_email || 'anonymous',
+      user_id: sessionData.creator_email || sessionData.username || 'anonymous',
+      creator_email: sessionData.creator_email,
+      username: sessionData.username,
       roast_session_id: sessionData.session_id,
       generated_photo_url: finalImageUrl,
-      ai_image_url: finalImageUrl,
       prompt: prompt,
       original_photo_url: sessionData.original_photo_url,
       recipient_identifier: sessionData.session_id

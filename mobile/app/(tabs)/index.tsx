@@ -37,7 +37,6 @@ import { NativeModules } from 'react-native';
 import Constants from 'expo-constants';
 import AppHeader from '@/components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import UserRegistration from '@/components/UserRegistration';
 import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
 
 let Share: any;
@@ -153,7 +152,6 @@ function HomeScreen() {
   const [promptIndex, setPromptIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
-  const [showUserRegistration, setShowUserRegistration] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showGestureHints, setShowGestureHints] = useState(true);
 
@@ -284,7 +282,7 @@ function HomeScreen() {
       try {
         const registered = await isUserRegistered();
         if (!registered) {
-          setShowUserRegistration(true);
+          router.push('/complete-registration');
         } else {
           const user = await getUserInfo();
           setUserInfo(user);
@@ -292,7 +290,7 @@ function HomeScreen() {
         }
       } catch (error) {
         console.error('Error checking user registration:', error);
-        setShowUserRegistration(true);
+        router.push('/complete-registration');
       }
     };
 
@@ -652,17 +650,6 @@ function HomeScreen() {
         </View>
       </SafeAreaView>
       
-      <UserRegistration
-        visible={showUserRegistration}
-        onComplete={async (userInfo) => {
-          setUserInfo(userInfo);
-          setShowUserRegistration(false);
-          console.log('👤 User registration completed:', userInfo);
-        }}
-        onCancel={() => {
-          setShowUserRegistration(false);
-        }}
-      />
     </GestureHandlerRootView>
   );
 }

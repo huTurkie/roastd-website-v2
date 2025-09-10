@@ -134,17 +134,48 @@ export async function updateRoastPrompt(
   newPrompt: string
 ): Promise<boolean> {
   try {
+    console.log('🔄 Updating roast session with link_code:', linkCode);
+    console.log('🔄 New prompt:', newPrompt);
+    
+    // First check if the record exists
+    const { data: existingRecord, error: checkError } = await supabase
+      .from('roast_sessions')
+      .select('session_id, link_code, roast_prompt')
+      .eq('link_code', linkCode)
+      .single();
+    
+    console.log('🔍 Existing record check:', existingRecord);
+    console.log('🔍 Check error:', checkError);
+    
+    if (!existingRecord) {
+      console.error('❌ Record not found for link_code:', linkCode);
+      return false;
+    }
+    
     const { data, error } = await supabase
       .from('roast_sessions')
-      .update({ roast_prompt: newPrompt })
-      .eq('link_code', linkCode);
+      .update({ 
+        roast_prompt: newPrompt,
+        updated_prompt: newPrompt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('link_code', linkCode)
+      .select();
+
+    console.log('🔄 Update response data:', data);
+    console.log('🔄 Update response error:', error);
 
     if (error) {
       console.error('Error updating roast prompt:', error);
       return false;
     }
 
-    console.log('✅ Roast prompt updated successfully');
+    if (!data || data.length === 0) {
+      console.error('❌ No rows were updated - link_code may not exist:', linkCode);
+      return false;
+    }
+
+    console.log('✅ Roast prompt updated successfully, rows affected:', data.length);
     return true;
   } catch (error) {
     console.error('Error updating roast prompt:', error);
