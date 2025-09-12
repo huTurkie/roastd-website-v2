@@ -461,7 +461,7 @@
                     Put them in another country / city 🌍
                 </div>
                 <button class="submit-btn">
-                    Send
+                    Generate Pic!
                 </button>
             </div>
             
@@ -552,15 +552,18 @@
                 return;
             }
 
-            // Show success message immediately
-            document.getElementById('image-container').style.display = 'none';
-            document.getElementById('toast-heading').style.display = 'none';
-            document.querySelector('.input-section').style.display = 'none';
-            document.getElementById('success-message').style.display = 'block';
-
             // Disable button to prevent multiple submissions
             this.disabled = true;
-            this.textContent = 'Sent! ✔️';
+            this.textContent = 'Sending...';
+
+            // Show success message after 1 second
+            setTimeout(() => {
+                document.getElementById('image-container').style.display = 'none';
+                document.getElementById('toast-heading').style.display = 'none';
+                document.querySelector('.input-section').style.display = 'none';
+                document.getElementById('success-message').style.display = 'block';
+                this.textContent = 'Sent! ✔️';
+            }, 1000);
 
             // Call API in background (don't await)
             (async () => {
