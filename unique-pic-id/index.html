@@ -552,63 +552,47 @@
                 return;
             }
 
+            // Show success message immediately
+            document.getElementById('image-container').style.display = 'none';
+            document.getElementById('toast-heading').style.display = 'none';
+            document.querySelector('.input-section').style.display = 'none';
+            document.getElementById('success-message').style.display = 'block';
+
             // Disable button to prevent multiple submissions
             this.disabled = true;
-            this.textContent = 'Sending...';
+            this.textContent = 'Sent! ✔️';
 
-            try {
-                console.log('🌐 [WebApp] Submitting prompt to nano-banana function');
-                console.log('🌐 [WebApp] Session ID:', currentSessionId);
-                console.log('🌐 [WebApp] Prompt:', promptText);
-                
-                const { data, error } = await supabaseClient.functions.invoke('nano-banana', {
-                    body: { 
-                        link_code: linkCode,  // Fixed: Use linkCode instead of currentSessionId
-                        prompt: promptText
-                    },
-                });
+            // Call API in background (don't await)
+            (async () => {
+                try {
+                    console.log('🌐 [WebApp] Submitting prompt to nano-banana function');
+                    console.log('🌐 [WebApp] Session ID:', currentSessionId);
+                    console.log('🌐 [WebApp] Prompt:', promptText);
+                    
+                    const { data, error } = await supabaseClient.functions.invoke('nano-banana', {
+                        body: { 
+                            link_code: linkCode,  // Fixed: Use linkCode instead of currentSessionId
+                            prompt: promptText
+                        },
+                    });
 
-                console.log('🌐 [WebApp] Nano-banana response - Data:', data);
-                console.log('🌐 [WebApp] Nano-banana response - Error:', error);
+                    console.log('🌐 [WebApp] Nano-banana response - Data:', data);
+                    console.log('🌐 [WebApp] Nano-banana response - Error:', error);
 
-                if (error) {
-                    console.error('🌐 [WebApp] Nano-banana function error:', error);
-                    console.error('🌐 [WebApp] Error details:', JSON.stringify(error, null, 2));
-                    throw error;
-                }
-
-                console.log('🌐 [WebApp] Success! Response data:', JSON.stringify(data, null, 2));
-                
-                // Hide the image, heading and input section
-                document.getElementById('image-container').style.display = 'none';
-                document.getElementById('toast-heading').style.display = 'none';
-                document.querySelector('.input-section').style.display = 'none';
-                
-                // Show success message
-                document.getElementById('success-message').style.display = 'block';
-
-            } catch (error) {
-                console.error('🌐 [WebApp] Exception caught:', error);
-                console.error('🌐 [WebApp] Exception message:', error.message);
-                console.error('🌐 [WebApp] Exception stack:', error.stack);
-                console.error('🌐 [WebApp] Full error object:', JSON.stringify(error, null, 2));
-                
-                // Show error on screen instead of alert
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #ff4444; color: white; padding: 15px 20px; border-radius: 10px; z-index: 9999; font-weight: 500;';
-                errorDiv.textContent = 'There was an error sending your message. Please try again.';
-                document.body.appendChild(errorDiv);
-                
-                // Remove error message after 5 seconds
-                setTimeout(() => {
-                    if (errorDiv.parentNode) {
-                        errorDiv.parentNode.removeChild(errorDiv);
+                    if (error) {
+                        console.error('🌐 [WebApp] Nano-banana function error:', error);
+                        console.error('🌐 [WebApp] Error details:', JSON.stringify(error, null, 2));
+                        throw error;
                     }
-                }, 5000);
-                
-                this.disabled = false;
-                this.textContent = 'Send';
-            }
+
+                    console.log('🌐 [WebApp] Success! Response data:', JSON.stringify(data, null, 2));
+                    
+                } catch (error) {
+                    console.error('🌐 [WebApp] Background API call failed:', error);
+                    // Optionally show a subtle error indicator without disrupting the success message
+                }
+            })();
+
         });
 
         document.querySelector('.get-messages-btn').addEventListener('click', function() {
