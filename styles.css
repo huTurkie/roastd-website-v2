@@ -352,10 +352,14 @@ body {
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
-/* Mobile-specific adjustment to move logo higher */
+/* Mobile-specific adjustment to move logo higher and make it bigger */
 @media (max-width: 768px) {
     .navbar {
         transform: translateY(-29px);
+    }
+    
+    .brand-logo {
+        height: clamp(60px, 8vw, 80px);
     }
 }
 
