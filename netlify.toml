@@ -1,0 +1,22 @@
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/:code"
+  to = "/unique-pic-id/?code=:code"
+  status = 200
+  conditions = {Role = ["admin"]}
+  
+# Match 8-character alphanumeric codes only
+[[redirects]]
+  from = "/:code"
+  to = "/unique-pic-id/?code=:code"
+  status = 200
+  conditions = {Role = ["admin"], Path = ["~^/[A-Za-z0-9]{8}$"]}
+
+# Fallback for any 8-character path
+[[redirects]]
+  from = "/*"
+  to = "/unique-pic-id/?code=:splat"
+  status = 200
+  force = false
