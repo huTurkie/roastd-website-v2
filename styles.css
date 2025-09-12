@@ -339,15 +339,10 @@ body {
     padding: 0 2rem;
 }
 
-.brand-text {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: white;
-    text-transform: lowercase;
-    background: linear-gradient(45deg, rgba(255, 255, 255, 0.9), rgba(255, 235, 59, 0.8));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+.brand-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
 }
 
 .nav-menu {
