@@ -233,9 +233,18 @@ export default function CompleteRegistrationScreen() {
 
       // For sign up, save user info to AsyncStorage for settings page
       if (isSignUp) {
-        await AsyncStorage.setItem('user_username', username || '');
+        // Get the actual username from the created profile (in case it was auto-generated)
+        const { data: createdProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', authResult.data.user.id)
+          .single();
+        
+        const finalUsername = createdProfile?.username || username || '';
+        
+        await AsyncStorage.setItem('user_username', finalUsername);
         await AsyncStorage.setItem('user_email', email);
-        console.log('Sign-up: User data saved to AsyncStorage:', { username, email });
+        console.log('Sign-up: User data saved to AsyncStorage:', { username: finalUsername, email });
         
         // Clear onboarding data
         await AsyncStorage.multiRemove(['userUsername', 'userPlatformPreference', 'userAgeRange']);
