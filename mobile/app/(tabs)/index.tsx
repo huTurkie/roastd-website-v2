@@ -154,6 +154,8 @@ function HomeScreen() {
   const [uploadedImageUri, setUploadedImageUri] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showGestureHints, setShowGestureHints] = useState(true);
+  const [showShareInstructions, setShowShareInstructions] = useState(false);
+  const [currentInstructionPage, setCurrentInstructionPage] = useState(1);
 
   const viewShotRef = useRef<ViewShot>(null);
   const shareViewShotRef = useRef<ViewShot>(null);
@@ -375,12 +377,18 @@ function HomeScreen() {
   };
 
   const handleSharePress = async () => {
-    try {
-      if (!uploadedImageUri) {
-        Alert.alert('Oops!', 'Please upload an image first!');
-        return;
-      }
+    if (!uploadedImageUri) {
+      Alert.alert('Oops!', 'Please upload an image first!');
+      return;
+    }
 
+    // Show share instructions modal
+    setShowShareInstructions(true);
+    setCurrentInstructionPage(1);
+  };
+
+  const handleActualShare = async () => {
+    try {
       // Hide gesture hints before capture
       setShowGestureHints(false);
       topHintOpacity.value = withTiming(0, { duration: 200 });
@@ -532,6 +540,145 @@ function HomeScreen() {
     setBgIndex((prevIndex) => (prevIndex + 1) % backgroundOptions.length);
   };
 
+  const renderShareInstructionsModal = () => {
+    const pages = [
+      {
+        title: "How to add the Link to your story",
+        content: (
+          <View style={styles.instructionPageContent}>
+            <Text style={styles.instructionText}>Click the 🔗 button</Text>
+            <View style={styles.mockPhoneContainer}>
+              <View style={styles.mockPhone}>
+                <View style={styles.mockPhoneHeader}>
+                  <View style={styles.mockPhoneStatusBar}>
+                    <Text style={styles.mockPhoneTime}>9:41</Text>
+                    <View style={styles.mockPhoneSignals}>
+                      <View style={styles.mockSignalDot} />
+                      <View style={styles.mockSignalDot} />
+                      <View style={styles.mockSignalDot} />
+                    </View>
+                  </View>
+                  <View style={styles.mockInstagramHeader}>
+                    <Ionicons name="chevron-back" size={24} color="white" />
+                    <Text style={styles.mockInstagramHeaderText}>Aa</Text>
+                    <Ionicons name="images" size={20} color="white" />
+                    <Ionicons name="add" size={24} color="white" />
+                    <Ionicons name="ellipsis-horizontal" size={20} color="white" />
+                  </View>
+                </View>
+                <View style={styles.mockPhoneContent}>
+                  <View style={styles.mockStoryBackground} />
+                  <View style={styles.mockProfileCircle}>
+                    <View style={styles.mockProfileImage} />
+                  </View>
+                  <View style={styles.mockLinkButton}>
+                    <Ionicons name="link" size={16} color="white" />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )
+      },
+      {
+        title: "Step 2",
+        content: (
+          <View style={styles.instructionPageContent}>
+            <Text style={styles.instructionText}>Paste your link in the URL field</Text>
+          </View>
+        )
+      },
+      {
+        title: "Step 3", 
+        content: (
+          <View style={styles.instructionPageContent}>
+            <Text style={styles.instructionText}>Add text or stickers if you want</Text>
+          </View>
+        )
+      },
+      {
+        title: "Step 4",
+        content: (
+          <View style={styles.instructionPageContent}>
+            <Text style={styles.instructionText}>Share to your story!</Text>
+          </View>
+        )
+      }
+    ];
+
+    return (
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          {/* Social media icons */}
+          <View style={styles.socialIconsContainer}>
+            <View style={styles.socialIcon}>
+              <Ionicons name="logo-instagram" size={24} color="white" />
+            </View>
+            <View style={styles.socialIcon}>
+              <Ionicons name="logo-snapchat" size={24} color="white" />
+            </View>
+            <View style={styles.socialIcon}>
+              <Ionicons name="logo-whatsapp" size={24} color="white" />
+            </View>
+          </View>
+
+          {/* Modal content */}
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{pages[currentInstructionPage - 1].title}</Text>
+            
+            {/* Page indicators */}
+            <View style={styles.pageIndicators}>
+              {[1, 2, 3, 4].map((page) => (
+                <View
+                  key={page}
+                  style={[
+                    styles.pageIndicator,
+                    currentInstructionPage === page && styles.activePageIndicator
+                  ]}
+                >
+                  <Text style={[
+                    styles.pageIndicatorText,
+                    currentInstructionPage === page && styles.activePageIndicatorText
+                  ]}>
+                    {page}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {pages[currentInstructionPage - 1].content}
+
+            {/* Next Step button */}
+            <TouchableOpacity
+              style={styles.nextStepButton}
+              onPress={() => {
+                if (currentInstructionPage < 4) {
+                  setCurrentInstructionPage(currentInstructionPage + 1);
+                } else {
+                  // Last page - close modal and actually share
+                  setShowShareInstructions(false);
+                  handleActualShare();
+                }
+              }}
+            >
+              <Text style={styles.nextStepButtonText}>
+                {currentInstructionPage < 4 ? 'Next Step' : 'Share Now'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Share button at bottom */}
+          <TouchableOpacity
+            style={styles.modalShareButton}
+            onPress={() => setShowShareInstructions(false)}
+          >
+            <Text style={styles.modalShareButtonText}>Share!</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
 
@@ -648,6 +795,9 @@ function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Share Instructions Modal */}
+        {showShareInstructions && renderShareInstructionsModal()}
       </SafeAreaView>
       
     </GestureHandlerRootView>
@@ -976,6 +1126,204 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 20,
+  },
+  // Modal styles
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalContainer: {
+    width: '90%',
+    maxWidth: 350,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+  },
+  socialIconsContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 15,
+  },
+  socialIcon: {
+    width: 50,
+    height: 35,
+    backgroundColor: '#333',
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  pageIndicators: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 10,
+  },
+  pageIndicator: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activePageIndicator: {
+    backgroundColor: '#333',
+  },
+  pageIndicatorText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#999',
+  },
+  activePageIndicatorText: {
+    color: 'white',
+  },
+  instructionPageContent: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  instructionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  mockPhoneContainer: {
+    alignItems: 'center',
+  },
+  mockPhone: {
+    width: 200,
+    height: 350,
+    backgroundColor: '#000',
+    borderRadius: 25,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mockPhoneHeader: {
+    backgroundColor: '#000',
+    paddingTop: 10,
+  },
+  mockPhoneStatusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+  },
+  mockPhoneTime: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  mockPhoneSignals: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  mockSignalDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'white',
+  },
+  mockInstagramHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  mockInstagramHeaderText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mockPhoneContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  mockStoryBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#4A90E2',
+    opacity: 0.7,
+  },
+  mockProfileCircle: {
+    position: 'absolute',
+    bottom: 80,
+    left: '50%',
+    marginLeft: -25,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mockProfileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ccc',
+  },
+  mockLinkButton: {
+    position: 'absolute',
+    top: 60,
+    right: 15,
+    width: 35,
+    height: 35,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nextStepButton: {
+    backgroundColor: '#333',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    marginTop: 10,
+  },
+  nextStepButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalShareButton: {
+    backgroundColor: '#E1306C',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    marginTop: 15,
+    width: '100%',
+  },
+  modalShareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
