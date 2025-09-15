@@ -156,6 +156,7 @@ function HomeScreen() {
   const [showGestureHints, setShowGestureHints] = useState(true);
   const [showShareInstructions, setShowShareInstructions] = useState(false);
   const [currentInstructionPage, setCurrentInstructionPage] = useState(1);
+  const [selectedSocialPlatform, setSelectedSocialPlatform] = useState('instagram');
 
   const viewShotRef = useRef<ViewShot>(null);
   const shareViewShotRef = useRef<ViewShot>(null);
@@ -541,85 +542,285 @@ function HomeScreen() {
   };
 
   const renderShareInstructionsModal = () => {
-    const pages = [
-      {
-        title: "How to add the Link to your story",
-        content: (
-          <View style={styles.instructionPageContent}>
-            <Text style={styles.instructionText}>Click the 🔗 button</Text>
-            <View style={styles.mockPhoneContainer}>
-              <View style={styles.mockPhone}>
-                <View style={styles.mockPhoneHeader}>
-                  <View style={styles.mockPhoneStatusBar}>
-                    <Text style={styles.mockPhoneTime}>9:41</Text>
-                    <View style={styles.mockPhoneSignals}>
-                      <View style={styles.mockSignalDot} />
-                      <View style={styles.mockSignalDot} />
-                      <View style={styles.mockSignalDot} />
+    const getPages = () => {
+      if (selectedSocialPlatform === 'instagram') {
+        return [
+          {
+            title: "How to add the Link to your story",
+            content: (
+              <View style={styles.instructionPageContent}>
+                <Text style={styles.instructionText}>Click the 🔗 button</Text>
+                <View style={styles.mockPhoneContainer}>
+                  <View style={styles.mockPhone}>
+                    <View style={styles.mockPhoneHeader}>
+                      <View style={styles.mockPhoneStatusBar}>
+                        <Text style={styles.mockPhoneTime}>9:41</Text>
+                        <View style={styles.mockPhoneSignals}>
+                          <View style={styles.mockSignalDot} />
+                          <View style={styles.mockSignalDot} />
+                          <View style={styles.mockSignalDot} />
+                        </View>
+                      </View>
+                      <View style={styles.mockInstagramHeader}>
+                        <Ionicons name="chevron-back" size={24} color="white" />
+                        <Text style={styles.mockInstagramHeaderText}>Aa</Text>
+                        <Ionicons name="images" size={20} color="white" />
+                        <Ionicons name="add" size={24} color="white" />
+                        <Ionicons name="ellipsis-horizontal" size={20} color="white" />
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.mockInstagramHeader}>
-                    <Ionicons name="chevron-back" size={24} color="white" />
-                    <Text style={styles.mockInstagramHeaderText}>Aa</Text>
-                    <Ionicons name="images" size={20} color="white" />
-                    <Ionicons name="add" size={24} color="white" />
-                    <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-                  </View>
-                </View>
-                <View style={styles.mockPhoneContent}>
-                  <View style={styles.mockStoryBackground} />
-                  <View style={styles.mockProfileCircle}>
-                    <View style={styles.mockProfileImage} />
-                  </View>
-                  <View style={styles.mockLinkButton}>
-                    <Ionicons name="link" size={16} color="white" />
+                    <View style={styles.mockPhoneContent}>
+                      <View style={styles.mockStoryBackground} />
+                      <View style={styles.mockProfileCircle}>
+                        <View style={styles.mockProfileImage} />
+                      </View>
+                      <View style={styles.mockLinkButton}>
+                        <Ionicons name="link" size={16} color="white" />
+                      </View>
+                    </View>
                   </View>
                 </View>
               </View>
-            </View>
-          </View>
-        )
-      },
-      {
-        title: "Step 2",
-        content: (
-          <View style={styles.instructionPageContent}>
-            <Text style={styles.instructionText}>Paste your link in the URL field</Text>
-          </View>
-        )
-      },
-      {
-        title: "Step 3", 
-        content: (
-          <View style={styles.instructionPageContent}>
-            <Text style={styles.instructionText}>Add text or stickers if you want</Text>
-          </View>
-        )
-      },
-      {
-        title: "Step 4",
-        content: (
-          <View style={styles.instructionPageContent}>
-            <Text style={styles.instructionText}>Share to your story!</Text>
-          </View>
-        )
+            )
+          },
+          {
+            title: "Step 2",
+            content: (
+              <View style={styles.instructionPageContent}>
+                <Text style={styles.instructionText}>Paste your link in the URL field</Text>
+              </View>
+            )
+          },
+          {
+            title: "Step 3", 
+            content: (
+              <View style={styles.instructionPageContent}>
+                <Text style={styles.instructionText}>Add text or stickers if you want</Text>
+              </View>
+            )
+          },
+          {
+            title: "Step 4",
+            content: (
+              <View style={styles.instructionPageContent}>
+                <Text style={styles.instructionText}>Share to your story!</Text>
+              </View>
+            )
+          }
+        ];
+      } else if (selectedSocialPlatform === 'snapchat') {
+        return [
+          {
+            title: "Snapchat Sharing - Step 1",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-snapchat" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    Snapchat sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "Snapchat Sharing - Step 2",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-snapchat" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    Snapchat sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "Snapchat Sharing - Step 3",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-snapchat" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    Snapchat sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "Snapchat Sharing - Step 4",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-snapchat" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    Snapchat sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          }
+        ];
+      } else if (selectedSocialPlatform === 'whatsapp') {
+        return [
+          {
+            title: "WhatsApp Sharing - Step 1",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-whatsapp" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    WhatsApp sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "WhatsApp Sharing - Step 2",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-whatsapp" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    WhatsApp sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "WhatsApp Sharing - Step 3",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-whatsapp" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    WhatsApp sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          },
+          {
+            title: "WhatsApp Sharing - Step 4",
+            content: (
+              <View style={styles.comingSoonContainer}>
+                <LinearGradient
+                  colors={['#FEDA77', '#F58529', '#DD2A7B', '#8134AF', '#515BD4']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.comingSoonGradient}
+                >
+                  <Ionicons name="logo-whatsapp" size={48} color="white" />
+                  <Text style={styles.comingSoonTitle}>Coming Soon</Text>
+                  <Text style={styles.comingSoonSubtitle}>
+                    WhatsApp sharing will be available soon!
+                  </Text>
+                </LinearGradient>
+              </View>
+            )
+          }
+        ];
       }
-    ];
+      return [];
+    };
+
+    const pages = getPages();
 
     return (
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
+          {/* Close Button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowShareInstructions(false)}
+          >
+            <Ionicons name="close" size={24} color="#666" />
+          </TouchableOpacity>
+
           {/* Social media icons */}
           <View style={styles.socialIconsContainer}>
-            <View style={styles.socialIcon}>
+            <TouchableOpacity 
+              style={[
+                styles.socialIcon,
+                selectedSocialPlatform === 'instagram' && styles.activeSocialIcon
+              ]}
+              onPress={() => {
+                setSelectedSocialPlatform('instagram');
+                setCurrentInstructionPage(1);
+              }}
+            >
               <Ionicons name="logo-instagram" size={24} color="white" />
-            </View>
-            <View style={styles.socialIcon}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.socialIcon,
+                selectedSocialPlatform === 'snapchat' && styles.activeSocialIcon
+              ]}
+              onPress={() => {
+                setSelectedSocialPlatform('snapchat');
+                setCurrentInstructionPage(1);
+              }}
+            >
               <Ionicons name="logo-snapchat" size={24} color="white" />
-            </View>
-            <View style={styles.socialIcon}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.socialIcon,
+                selectedSocialPlatform === 'whatsapp' && styles.activeSocialIcon
+              ]}
+              onPress={() => {
+                setSelectedSocialPlatform('whatsapp');
+                setCurrentInstructionPage(1);
+              }}
+            >
               <Ionicons name="logo-whatsapp" size={24} color="white" />
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Modal content */}
@@ -629,12 +830,13 @@ function HomeScreen() {
             {/* Page indicators */}
             <View style={styles.pageIndicators}>
               {[1, 2, 3, 4].map((page) => (
-                <View
+                <TouchableOpacity
                   key={page}
                   style={[
                     styles.pageIndicator,
                     currentInstructionPage === page && styles.activePageIndicator
                   ]}
+                  onPress={() => setCurrentInstructionPage(page)}
                 >
                   <Text style={[
                     styles.pageIndicatorText,
@@ -642,38 +844,54 @@ function HomeScreen() {
                   ]}>
                     {page}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
 
             {pages[currentInstructionPage - 1].content}
 
-            {/* Next Step button */}
-            <TouchableOpacity
-              style={styles.nextStepButton}
-              onPress={() => {
-                if (currentInstructionPage < 4) {
+            {/* Next Step */}
+            {currentInstructionPage === 4 ? (
+              selectedSocialPlatform === 'instagram' ? (
+                <TouchableOpacity
+                  style={styles.instagramShareButton}
+                  onPress={() => {
+                    setShowShareInstructions(false);
+                    handleActualShare();
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#E1306C', '#C13584', '#833AB4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.instagramGradient}
+                  >
+                    <Text style={[styles.nextStepButtonText, { numberOfLines: 1 }]}>Share on Instagram!</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.nextStepButton}
+                  onPress={() => {
+                    setShowShareInstructions(false);
+                  }}
+                >
+                  <Text style={styles.nextStepButtonText}>Close</Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <TouchableOpacity
+                style={styles.nextStepButton}
+                onPress={() => {
                   setCurrentInstructionPage(currentInstructionPage + 1);
-                } else {
-                  // Last page - close modal and actually share
-                  setShowShareInstructions(false);
-                  handleActualShare();
-                }
-              }}
-            >
-              <Text style={styles.nextStepButtonText}>
-                {currentInstructionPage < 4 ? 'Next Step' : 'Share Now'}
-              </Text>
-            </TouchableOpacity>
+                }}
+              >
+                <Text style={styles.nextStepButtonText}>Next Step</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Share button at bottom */}
-          <TouchableOpacity
-            style={styles.modalShareButton}
-            onPress={() => setShowShareInstructions(false)}
-          >
-            <Text style={styles.modalShareButtonText}>Share!</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1160,6 +1378,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  activeSocialIcon: {
+    backgroundColor: '#E1306C',
+    shadowColor: '#E1306C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   modalContent: {
     width: '100%',
     alignItems: 'center',
@@ -1294,7 +1520,7 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1304,6 +1530,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 40,
     marginTop: 10,
+  },
+  instagramShareButton: {
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 10,
+    minWidth: 250,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instagramGradient: {
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minWidth: 250,
   },
   nextStepButtonText: {
     color: 'white',
@@ -1324,6 +1569,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  comingSoonContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  comingSoonGradient: {
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 250,
+    minHeight: 150,
+  },
+  comingSoonTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  comingSoonSubtitle: {
+    fontSize: 16,
+    color: 'white',
+    marginTop: 10,
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
 
