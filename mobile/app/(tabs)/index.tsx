@@ -38,6 +38,7 @@ import Constants from 'expo-constants';
 import AppHeader from '@/components/AppHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserInfo, isUserRegistered, UserInfo } from '../../lib/userHelpers';
+import Svg, { Path, Circle } from 'react-native-svg';
 
 let Share: any;
 if (Constants.appOwnership !== 'expo') {
@@ -549,50 +550,64 @@ function HomeScreen() {
             title: "How to add the Link to your story",
             content: (
               <View style={styles.instructionPageContent}>
-                <Text style={styles.instructionText}>Click the 🔗 button</Text>
-                <View style={styles.mockPhoneContainer}>
-                  <View style={styles.mockPhone}>
-                    <View style={styles.mockPhoneHeader}>
-                      <View style={styles.mockPhoneStatusBar}>
-                        <Text style={styles.mockPhoneTime}>9:41</Text>
-                        <View style={styles.mockPhoneSignals}>
-                          <View style={styles.mockSignalDot} />
-                          <View style={styles.mockSignalDot} />
-                          <View style={styles.mockSignalDot} />
-                        </View>
-                      </View>
-                      <View style={styles.mockInstagramHeader}>
-                        <Ionicons name="chevron-back" size={24} color="white" />
-                        <Text style={styles.mockInstagramHeaderText}>Aa</Text>
-                        <Ionicons name="images" size={20} color="white" />
-                        <Ionicons name="add" size={24} color="white" />
-                        <Ionicons name="ellipsis-horizontal" size={20} color="white" />
-                      </View>
-                    </View>
-                    <View style={styles.mockPhoneContent}>
-                      <View style={styles.mockStoryBackground} />
-                      <View style={styles.mockProfileCircle}>
-                        <View style={styles.mockProfileImage} />
-                      </View>
-                      <View style={styles.mockLinkButton}>
-                        <Ionicons name="link" size={16} color="white" />
-                      </View>
-                    </View>
-                  </View>
+                <View style={styles.linkTextContainer}>
+                  <Text style={[styles.instructionText, {marginBottom: 20}]}>Click the </Text>
+                  <Svg width="20" height="20" viewBox="0 0 20 20" style={{marginHorizontal: 2}}>
+                    <Path 
+                      d="M 2 1 H 16 Q 19 1 19 4 V 14 L 15 19 H 2 Q 1 19 1 16 V 4 Q 1 1 2 1 Z"
+                      fill="white" 
+                      stroke="#999" 
+                      strokeWidth="1"
+                    />
+                    <Path 
+                      d="M 15 19 L 19 14"
+                      stroke="#999" 
+                      strokeWidth="1"
+                    />
+                    <Circle cx="6" cy="7" r="1" fill="#333"/>
+                    <Circle cx="14" cy="7" r="1" fill="#333"/>
+                    <Path 
+                      d="M 5 11 Q 10 15 15 11"
+                      fill="none" 
+                      stroke="#333" 
+                      strokeWidth="1.2" 
+                      strokeLinecap="round"
+                    />
+                  </Svg>
+                  <Text style={[styles.instructionText, {marginBottom: 20}]}> button</Text>
                 </View>
+                <Image 
+                  source={require('../../assets/images/step-one.png')}
+                  style={[styles.stepImage, {marginBottom: 20}]}
+                  resizeMode="contain"
+                />
               </View>
             )
           },
           {
-            title: "Step 2",
+            title: "How to add the Link to your story",
             content: (
               <View style={styles.instructionPageContent}>
-                <Text style={styles.instructionText}>Paste your link in the URL field</Text>
+                <View style={styles.linkTextContainer}>
+                  <Text style={[styles.instructionText, {marginBottom: -15, fontSize: 16}]}>Click the </Text>
+                  <View style={styles.linkButtonContainer}>
+                    <View style={styles.inclinedIcon}>
+                      <Ionicons name="link" size={16} color="#007AFF" />
+                    </View>
+                    <Text style={[styles.linkButtonText]}>LINK</Text>
+                  </View>
+                  <Text style={[styles.instructionText, {marginBottom: -15, fontSize: 16}]}> button</Text>
+                </View>
+                <Image 
+                  source={require('../../assets/images/link.png')}
+                  style={styles.stepImage}
+                  resizeMode="contain"
+                />
               </View>
             )
           },
           {
-            title: "Step 3", 
+            title: "How to add the Link to your story", 
             content: (
               <View style={styles.instructionPageContent}>
                 <Text style={styles.instructionText}>Add text or stickers if you want</Text>
@@ -600,7 +615,7 @@ function HomeScreen() {
             )
           },
           {
-            title: "Step 4",
+            title: "How to add the Link to your story",
             content: (
               <View style={styles.instructionPageContent}>
                 <Text style={styles.instructionText}>Share to your story!</Text>
@@ -1423,14 +1438,12 @@ const styles = StyleSheet.create({
   },
   instructionPageContent: {
     alignItems: 'center',
-    marginBottom: 20,
   },
   instructionText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 20,
   },
   mockPhoneContainer: {
     alignItems: 'center',
@@ -1529,7 +1542,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingVertical: 12,
     paddingHorizontal: 40,
-    marginTop: 10,
+    marginTop: -35,
   },
   instagramShareButton: {
     borderRadius: 25,
@@ -1615,6 +1628,44 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  stepImage: {
+    width: 320,
+    height: 320,
+    marginTop: -40,
+  },
+  linkTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  inclinedIcon: {
+    transform: [{ rotate: '-45deg' }],
+  },
+  linkButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  linkButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 1,
+  },
+  debugText: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    fontSize: 12,
+    color: '#666',
+    zIndex: 10,
   },
 });
 
