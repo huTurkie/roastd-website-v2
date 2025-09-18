@@ -48,7 +48,7 @@ serve(async (req) => {
     // Use .maybeSingle() instead of .single() for better error handling
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('roast_sessions')
-      .select('session_id, original_photo_url, creator_email, username')
+      .select('session_id, original_photo_url, creator_email, username, roast_prompt')
       .eq('link_code', link_code)
       .maybeSingle()
 
@@ -68,19 +68,38 @@ serve(async (req) => {
     
     console.log('✅ [nano-banana] Session data retrieved:', { original_photo_url: sessionData.original_photo_url });
     
-    // Update session with user2 prompt
-    console.log('🔥 [nano-banana] STEP 5: Updating session with user2 prompt...');
-    const { error: updateError } = await supabaseClient
-      .from('roast_sessions')
-      .update({ updated_prompt: prompt })
-      .eq('link_code', link_code);
+    // Create NEW session record in roast_sessions table with unique pic ID
+    console.log('🔥 [nano-banana] STEP 5: Creating new session record with unique pic ID...');
     
-    if (updateError) {
-      console.error('❌ [nano-banana] Error updating session with prompt:', updateError);
-      throw new Error(`Failed to update session: ${updateError.message}`);
+    // Generate proper UUID for this user's submission
+    const uniquePicId = crypto.randomUUID();
+    console.log('🔥 [nano-banana] STEP 6: Generated unique UUID:', uniquePicId);
+    
+    // Insert new session record into roast_sessions table
+    const { data: newSession, error: insertError } = await supabaseClient
+      .from('roast_sessions')
+      .insert({
+        session_id: uniquePicId,
+        link_code: sessionData.link_code, // Preserve the original link_code
+        original_photo_url: sessionData.original_photo_url,
+        creator_email: sessionData.creator_email,
+        username: sessionData.username,
+        roast_prompt: sessionData.roast_prompt || 'roast this pic 😂🔥',
+        updated_prompt: prompt,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error('❌ [nano-banana] Error creating new session record:', insertError);
+      throw new Error(`Failed to create new session: ${insertError.message}`);
     }
     
-    console.log('🔥 [nano-banana] STEP 6: Session updated with prompt successfully');
+    console.log('✅ [nano-banana] New session record created successfully:', uniquePicId);
+    
+    // Use the new session for the rest of the process
+    const currentSession = newSession;
 
     // Download original image for multimodal input
     console.log('🔥 [nano-banana] STEP 7: Downloading original image:', sessionData.original_photo_url);
@@ -253,7 +272,7 @@ The image must be optimized for Instagram Stories sharing without any stretching
       }
       
       // Upload generated image to Supabase storage
-      const fileName = `ai_generated_${sessionData.session_id}_${Date.now()}.jpg`;
+      const fileName = `ai_generated_${currentSession.session_id}_${Date.now()}.jpg`;
       console.log('📤 [nano-banana] STEP 15: Uploading generated image to storage:', fileName);
       
       const { data: uploadData, error: uploadError } = await supabaseClient.storage
@@ -277,14 +296,14 @@ The image must be optimized for Instagram Stories sharing without any stretching
           finalImageUrl = urlData.publicUrl;
           console.log('🖼️ [nano-banana] Generated image URL:', finalImageUrl);
           
-          // Update session with generated image URL - try both possible column names
+          // Update the new session record with generated image URL
           const { error: updateImageError } = await supabaseClient
             .from('roast_sessions')
             .update({ 
               ai_image_url: finalImageUrl,
               generated_photo_url: finalImageUrl 
             })
-            .eq('link_code', link_code);
+            .eq('session_id', currentSession.session_id);
           
           if (updateImageError) {
             console.error('❌ [nano-banana] Error updating session with generated image URL:', updateImageError);
@@ -301,19 +320,20 @@ The image must be optimized for Instagram Stories sharing without any stretching
     // Insert into inbox for mobile app
     console.log('🔥 [nano-banana] STEP 16: Inserting into inbox for mobile app display');
     
-    console.log('🔍 [nano-banana] DEBUG: Session data retrieved:', sessionData);
-    console.log('🔍 [nano-banana] DEBUG: creator_email:', sessionData.creator_email);
-    console.log('🔍 [nano-banana] DEBUG: username:', sessionData.username);
+    console.log('🔍 [nano-banana] DEBUG: Session data retrieved:', currentSession);
+    console.log('🔍 [nano-banana] DEBUG: creator_email:', currentSession.creator_email);
+    console.log('🔍 [nano-banana] DEBUG: username:', currentSession.username);
     
     const inboxInsertData = {
-      user_id: sessionData.creator_email || sessionData.username || 'anonymous',
-      creator_email: sessionData.creator_email,
-      username: sessionData.username,
-      roast_session_id: sessionData.session_id,
+      user_id: currentSession.creator_email || currentSession.username || 'anonymous',
+      creator_email: currentSession.creator_email,
+      username: currentSession.username,
+      roast_session_id: currentSession.session_id,
       generated_photo_url: finalImageUrl,
-      prompt: prompt,
-      original_photo_url: sessionData.original_photo_url,
-      recipient_identifier: sessionData.session_id
+      prompt: currentSession.updated_prompt || prompt,
+      original_photo_url: currentSession.original_photo_url,
+      recipient_identifier: currentSession.session_id,
+      created_at: new Date().toISOString()
     };
     
     console.log('🔍 [nano-banana] DEBUG: About to insert inbox data:', JSON.stringify(inboxInsertData, null, 2));
@@ -334,10 +354,11 @@ The image must be optimized for Instagram Stories sharing without any stretching
         // Second attempt: Minimal data insertion
         console.log('🔄 [nano-banana] Trying minimal data insertion...');
         const minimalData = {
-          user_id: 'nano-banana-function',
-          roast_session_id: sessionData.session_id,
-          prompt: prompt,
-          generated_photo_url: finalImageUrl
+          user_id: currentSession.creator_email || 'nano-banana-function',
+          roast_session_id: currentSession.session_id,
+          prompt: currentSession.updated_prompt || prompt,
+          generated_photo_url: finalImageUrl,
+          original_photo_url: currentSession.original_photo_url
         };
         
         const { data: minimalResult, error: minimalError } = await supabaseClient
@@ -348,8 +369,20 @@ The image must be optimized for Instagram Stories sharing without any stretching
         if (minimalError) {
           console.error('❌ [nano-banana] Minimal insertion failed:', minimalError);
           
-          // Third attempt: Super minimal
-          console.log('🔄 [nano-banana] Trying super minimal insertion...');
+          // Update the new session record with generated image URL
+          const { error: updateImageError } = await supabaseClient
+            .from('roast_sessions')
+            .update({ 
+              ai_image_url: finalImageUrl,
+              generated_photo_url: finalImageUrl 
+            })
+            .eq('session_id', currentSession.session_id);
+          
+          if (updateImageError) {
+            console.error('❌ [nano-banana] Error updating session with generated image URL:', updateImageError);
+          } else {
+            console.log('✅ [nano-banana] Session updated with generated image URL');
+          }
           const { data: superMinimal, error: superMinimalError } = await supabaseClient
             .from('inbox')
             .insert({
