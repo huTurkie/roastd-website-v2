@@ -104,8 +104,10 @@ const ShareableView = React.forwardRef<ViewShot, ShareableViewProps>(
               <View style={styles.linkPlaceholder}>
                 <Text style={styles.linkPlaceholderText}>Paste your </Text>
                 <View style={styles.linkButton}>
-                  <Ionicons name="link" size={12} color="#007AFF" />
-                  <Text style={styles.linkButtonText}> LINK</Text>
+                  <View style={styles.inclinedIcon}>
+                    <Ionicons name="link" size={14} color="#007AFF" />
+                  </View>
+                  <Text style={[styles.linkButtonText, {color: '#007AFF'}]}>LINK</Text>
                 </View>
                 <Text style={styles.linkPlaceholderText}> here</Text>
               </View>
@@ -119,6 +121,7 @@ const ShareableView = React.forwardRef<ViewShot, ShareableViewProps>(
 
 const prompts = [
   'Roast this pic 😂',
+  'Pair me with your favorite actor 🎭',
   'Turn me into a cartoon character 🎨',
   'Transform me into a meme character 😂',
   'Make me look cooler 😎',
@@ -623,7 +626,12 @@ function HomeScreen() {
             title: "How to add the Link to your story",
             content: (
               <View style={styles.instructionPageContent}>
-                <Text style={styles.instructionText}>Share to your story!</Text>
+                <Text style={[styles.instructionText, {marginBottom: 20}]}>Frame the link</Text>
+                <Image 
+                  source={require('../../assets/images/frame.png')}
+                  style={[styles.stepImage, {marginBottom: 9}]}
+                  resizeMode="contain"
+                />
               </View>
             )
           }
@@ -868,6 +876,11 @@ function HomeScreen() {
               ))}
             </View>
 
+            {/* Step subtitle for step 4 */}
+            {currentInstructionPage === 4 && (
+              <Text style={[styles.instructionText, {marginBottom: 20, fontSize: 18, fontWeight: '600', color: '#333'}]}>Frame the link</Text>
+            )}
+
             {pages[currentInstructionPage - 1].content}
 
             {/* Next Step */}
@@ -955,8 +968,10 @@ function HomeScreen() {
                       <View style={styles.linkPlaceholder}>
                         <Text style={styles.linkPlaceholderText}>Paste your </Text>
                         <View style={styles.linkButton}>
-                          <Ionicons name="link" size={12} color="#007AFF" />
-                          <Text style={styles.linkButtonText}> LINK</Text>
+                          <View style={styles.inclinedIcon}>
+                            <Ionicons name="link" size={14} color="#007AFF" />
+                          </View>
+                          <Text style={[styles.linkButtonText, {color: '#007AFF'}]}>LINK</Text>
                         </View>
                         <Text style={styles.linkPlaceholderText}> here</Text>
                       </View>
@@ -1297,8 +1312,8 @@ const styles = StyleSheet.create({
   },
   linkPlaceholder: {
     backgroundColor: '#FFF',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1312,16 +1327,16 @@ const styles = StyleSheet.create({
   linkButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#007AFF',
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    marginHorizontal: 4,
+    borderRadius: 4,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    marginHorizontal: 2,
   },
   linkButtonText: {
     color: '#007AFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   unifiedContainer: {
@@ -1329,8 +1344,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   promptBackground: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
     alignItems: 'center',
   },
   gradientBackground: {
@@ -1553,7 +1568,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    marginTop: 10,
+    marginTop: 3,
     minWidth: 250,
     alignSelf: 'center',
     alignItems: 'center',

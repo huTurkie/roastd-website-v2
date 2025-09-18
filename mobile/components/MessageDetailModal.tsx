@@ -10,7 +10,6 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
-import StickerCreator, { StickerCreatorRef } from './StickerCreator';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 
@@ -62,7 +61,6 @@ export default function MessageDetailModal({ visible, message, onClose, onDelete
   // All hooks must be called before any conditional logic
   const viewShotRef = useRef<ViewShot>(null);
   const backgroundViewShotRef = useRef<ViewShot>(null);
-  const stickerCreatorRef = useRef<StickerCreatorRef>(null);
   const [currentGradientIndex, setCurrentGradientIndex] = useState(0);
   const [selectedSocial, setSelectedSocial] = useState('instagram');
   const [isShowingOriginal, setIsShowingOriginal] = useState(false);
@@ -352,7 +350,7 @@ export default function MessageDetailModal({ visible, message, onClose, onDelete
 
   const handleShare = async () => {
     try {
-      // Trigger off-screen rendering of shareable content with watermark
+      // Revert to working single image approach
       setIsCapturingShare(true);
       
       // Wait for next render cycle to ensure the hidden ViewShot is rendered
@@ -387,9 +385,6 @@ export default function MessageDetailModal({ visible, message, onClose, onDelete
           data: contentUri,
           flags: 1,
           type: 'image/jpeg',
-          extra: {
-            'com.instagram.platform.extra.BACKGROUND_IMAGE': contentUri,
-          },
         });
       } else if (Platform.OS === 'ios') {
         const base64Image = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
@@ -401,15 +396,15 @@ export default function MessageDetailModal({ visible, message, onClose, onDelete
           appId: FACEBOOK_APP_ID,
         };
 
-        if (Share.shareSingle) {
+        if (Share.shareSingle && Constants.appOwnership !== 'expo') {
           await Share.shareSingle(shareOptions);
         } else {
-          Alert.alert('Error', 'Sharing functionality is not available.');
+          Alert.alert('Instagram Sharing Unavailable', 'Instagram sharing is not available in Expo Go. Please use a development build.');
         }
       }
     } catch (error: any) {
       console.error('Sharing error:', error);
-      setIsCapturingShare(false); // Ensure state is reset on error
+      setIsCapturingShare(false);
       if (error.message.includes('No Activity found to handle Intent')) {
         Alert.alert('Error', 'Could not open Instagram. Please make sure it is installed.');
       } else {
@@ -542,6 +537,27 @@ export default function MessageDetailModal({ visible, message, onClose, onDelete
                   />
                 </View>
                 </ViewShot>
+
+                {/* Background ViewShot for sharing */}
+                <ViewShot 
+                  ref={backgroundViewShotRef} 
+                  options={{ format: 'png', quality: 1.0, width: 1080, height: 1920 }} 
+                  style={styles.hiddenBackgroundContainer}
+                >
+                  <Image 
+                    source={{ uri: isShowingOriginal ? message.original_photo_url : message.generated_photo_url || 'https://picsum.photos/400/600' }} 
+                    style={styles.backgroundImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.backgroundWatermarkContainer}>
+                    <Image 
+                      source={require('../assets/images/footer3.png')}
+                      style={styles.backgroundWatermarkLogo}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </ViewShot>
+
 
                 {/* Gesture Hints - Outside ViewShot so they don't get captured */}
                 {showGestureHints && (
@@ -989,7 +1005,7 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     width: '100%',
-    height: 1800,
+    height: 1920,
     resizeMode: 'cover',
   },
   backgroundWatermarkContainer: {
