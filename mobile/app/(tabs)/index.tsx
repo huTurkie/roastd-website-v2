@@ -610,7 +610,12 @@ function HomeScreen() {
             title: "How to add the Link to your story", 
             content: (
               <View style={styles.instructionPageContent}>
-                <Text style={styles.instructionText}>Add text or stickers if you want</Text>
+                <Text style={[styles.instructionText, {marginBottom: 20}]}>Paste your link!</Text>
+                <Image 
+                  source={require('../../assets/images/paste.png')}
+                  style={[styles.stepImage, {marginBottom: 20}]}
+                  resizeMode="contain"
+                />
               </View>
             )
           },
