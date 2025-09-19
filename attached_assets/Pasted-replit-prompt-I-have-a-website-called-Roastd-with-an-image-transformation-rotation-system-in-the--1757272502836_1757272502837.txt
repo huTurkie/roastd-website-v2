@@ -1,0 +1,45 @@
+replit prompt
+
+I have a website called "Roastd" with an image transformation rotation system in the first section. The system shows a main black and white picture that alternates with different transformation examples to demonstrate what users can do.
+
+Current Setup:
+
+Main image file: attached_assets/main pic web_1757164517069.jpeg (black and white baseline)
+Rotation interval: 3 seconds per image
+Always returns to main picture between each transformation
+Current Transformation Sequence:
+
+Main picture → "Enter your roast or transformation prompt here..."
+Magical effect → "Add a magical effect around them ✨"
+Main picture → "Enter your roast or transformation prompt here..."
+Robot → "Turn them into a robot 🤖"
+Main picture → "Enter your roast or transformation prompt here..."
+Superhero → "Turn them into a superhero 🦸"
+Main picture → "Enter your roast or transformation prompt here..."
+Movie poster → "Put them in a movie poster 🎬"
+Main picture → "Enter your roast or transformation prompt here..."
+Outer space → "Put them in outer space 🚀"
+Main picture → "Enter your roast or transformation prompt here..."
+Historical figure → "Make them a historical figure 👑"
+Main picture → "Enter your roast or transformation prompt here..."
+Famous painting → "Put them in a famous painting 🖼️"
+Main picture → "Enter your roast or transformation prompt here..."
+Outfit swap → "Swap their outfit with someone famous 👗"
+Cycle repeats
+Technical Details:
+
+Images array and synchronized prompts are in script.js around lines 361-402
+Cache-busting is implemented with version numbers in index.html
+Documentation is maintained in firstsection.md
+Website has temporary "Roastd.link" logo in footer (can be removed if needed)
+Current script version: v15
+Current CSS version: v14
+File Structure:
+
+Main files: index.html, script.js, styles.css
+Documentation: firstsection.md
+Assets folder: attached_assets/ containing all transformation images
+What I Need Help With:
+[Insert your specific request here for the new AI advisor]
+
+The system is currently working perfectly with all transformations rotating properly. Any new additions should follow the same alternating pattern: Main picture → New transformation → Main picture.
