@@ -45,16 +45,27 @@ serve(async (req) => {
     console.log('🔍 [nano-banana] DEBUG: Sample sessions in database:', allSessions);
     console.log('🔍 [nano-banana] DEBUG: All sessions query error:', allSessionsError);
     
-    // Use .maybeSingle() instead of .single() for better error handling
+    // Get the ORIGINAL session record (the first one created for this link_code)
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('roast_sessions')
-      .select('session_id, original_photo_url, creator_email, username, roast_prompt')
+      .select('session_id, link_code, original_photo_url, creator_email, username, roast_prompt')
       .eq('link_code', link_code)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle()
 
     console.log('🔍 [nano-banana] DEBUG: Session query results:', sessionData);
     console.log('🔍 [nano-banana] DEBUG: Session query error:', sessionError);
     console.log('🔍 [nano-banana] DEBUG: Querying for link_code:', link_code);
+    
+    // Additional debugging - check if ANY sessions exist with this link_code
+    const { data: allMatchingSessions, error: allMatchingError } = await supabaseClient
+      .from('roast_sessions')
+      .select('session_id, link_code, created_at')
+      .eq('link_code', link_code);
+    
+    console.log('🔍 [nano-banana] DEBUG: ALL sessions with this link_code:', allMatchingSessions);
+    console.log('🔍 [nano-banana] DEBUG: Count of matching sessions:', allMatchingSessions?.length || 0);
 
     if (sessionError) {
       console.error('❌ [nano-banana] Database error retrieving session:', sessionError);
