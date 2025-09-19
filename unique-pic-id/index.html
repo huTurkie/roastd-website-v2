@@ -512,7 +512,9 @@
                 .from('roast_sessions')
                 .select('session_id, original_photo_url, roast_prompt')
                 .eq('link_code', linkCode)
-                .single();
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
 
             console.log('Supabase response:', { data, error });
             console.log('Fetched data:', data);
