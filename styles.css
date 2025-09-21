@@ -2387,6 +2387,7 @@ body {
     color: #ccc;
     font-size: 0.9rem;
     font-style: italic;
+    margin-top: -4px;
 }
 
 .footer-links {
