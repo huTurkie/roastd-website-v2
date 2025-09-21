@@ -2371,6 +2371,7 @@ body {
 
 .footer-brand {
     text-align: center;
+    align-self: start;
 }
 
 .footer-logo {
