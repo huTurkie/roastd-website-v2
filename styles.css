@@ -2374,7 +2374,7 @@ body {
 }
 
 .footer-logo {
-    height: clamp(50px, 6vw, 64px);
+    height: clamp(65px, 8vw, 80px);
     width: auto;
     display: block;
     object-fit: contain;
