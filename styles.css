@@ -2525,7 +2525,7 @@ body {
     }
     
     .footer-logo {
-        height: clamp(36px, 6vw, 48px);
+        height: clamp(70px, 12vw, 85px);
     }
     
     .temp-footer-logo,
