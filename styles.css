@@ -2378,7 +2378,7 @@ body {
     width: auto;
     display: block;
     object-fit: contain;
-    margin: 0 auto 0.25rem;
+    margin: 0 auto 0.1rem;
 }
 
 .footer-tagline {
