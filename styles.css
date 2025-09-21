@@ -2374,14 +2374,11 @@ body {
 }
 
 .footer-logo {
-    font-size: 2rem;
-    font-weight: 900;
-    background: linear-gradient(45deg, #ff4081, #ff6b35, #ffeb3b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    height: clamp(32px, 4vw, 40px);
+    width: auto;
     display: block;
-    margin-bottom: 0.5rem;
+    object-fit: contain;
+    margin: 0 auto 0.5rem;
 }
 
 .footer-tagline {
@@ -2525,7 +2522,7 @@ body {
     }
     
     .footer-logo {
-        font-size: 1.5rem;
+        height: clamp(28px, 5vw, 36px);
     }
     
     .temp-footer-logo,
