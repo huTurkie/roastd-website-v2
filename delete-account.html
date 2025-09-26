@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Delete My Account - Roastd</title>
+    <link rel="stylesheet" href="styles.css?v=14">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="attached_assets/footer3_1757672785581.png" alt="Roastd" class="brand-logo">
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link">Home</a>
+            </div>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="nav-icons">
+                <i class="fab fa-apple"></i>
+                <i class="fab fa-android"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="delete-account-container">
+        <div class="delete-account-content">
+            <h1>Delete My Account</h1>
+            
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h2>Important Notice</h2>
+            </div>
+            
+            <div class="delete-info">
+                <p>Once your account is deleted, all associated data will be permanently removed. This includes your username, email address, photos, and any other personal information. Please note that once deleted, this data cannot be recovered.</p>
+                
+                <p>To request account deletion, you will need to provide your username and the email address used to register with the Roastd app.</p>
+            </div>
+            
+            <button class="delete-account-btn" onclick="sendDeleteEmail()">
+                <i class="fas fa-trash-alt"></i>
+                Delete my account
+            </button>
+            
+            <div class="back-link">
+                <a href="/" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="attached_assets/footer3_1757672785581.png" alt="Roastd" class="footer-logo">
+                    <p class="footer-tagline">Real friends, real vibe</p>
+                </div>
+                
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>App</h4>
+                        <a href="#" class="footer-link">Download</a>
+                        <a href="mailto:support@roastd.link" class="footer-link">Request a feature</a>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4>Support</h4>
+                        <a href="mailto:support@roastd.link" class="footer-link">Contact</a>
+                        <a href="terms.html" class="footer-link" target="_blank" rel="noopener">Terms</a>
+                        <a href="privacy.html" class="footer-link" target="_blank" rel="noopener">Privacy</a>
+                        <a href="delete-account.html" class="footer-link">Delete my account</a>
+                    </div>
+                </div>
+                
+                <div class="footer-social">
+                    <div class="social-icons">
+                        <i class="fab fa-apple"></i>
+                        <i class="fab fa-android"></i>
+                        <i class="fab fa-instagram"></i>
+                        <i class="fab fa-tiktok"></i>
+                    </div>
+                    <div class="temp-logo-container">
+                        <span class="temp-footer-logo">Roastd</span>
+                        <span class="temp-link-text">.link</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 Roastd. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function sendDeleteEmail() {
+            const subject = "User Account Deletion request | Roastd";
+            const body = `I, [please enter your full name], request the deletion of my Roastd account. Please find my account details below:
+
+Username:
+Email Address:
+
+
+`;
+            
+            const mailtoLink = `mailto:support@roastd.link?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;
+        }
+    </script>
+
+    <style>
+        .delete-account-container {
+            min-height: calc(100vh - 200px);
+            padding: 120px 2rem 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .delete-account-content {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .delete-account-content h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 30px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .warning-box i {
+            font-size: 1.5rem;
+        }
+
+        .warning-box h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .delete-info {
+            text-align: left;
+            margin-bottom: 40px;
+        }
+
+        .delete-info p {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 20px;
+        }
+
+        .delete-account-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto 30px;
+            width: fit-content;
+        }
+
+        .delete-account-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(238, 90, 82, 0.4);
+        }
+
+        .back-link {
+            text-align: center;
+        }
+
+        .back-btn {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            color: #5a67d8;
+            transform: translateX(-5px);
+        }
+
+        @media (max-width: 768px) {
+            .delete-account-container {
+                padding: 100px 1rem 40px;
+            }
+
+            .delete-account-content {
+                padding: 30px 25px;
+            }
+
+            .delete-account-content h1 {
+                font-size: 1.7rem;
+            }
+
+            .warning-box {
+                padding: 15px;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .warning-box i {
+                font-size: 1.2rem;
+            }
+
+            .warning-box h2 {
+                font-size: 1rem;
+            }
+
+            .delete-info p {
+                font-size: 0.9rem;
+            }
+
+            .delete-account-btn {
+                font-size: 1rem;
+                padding: 12px 25px;
+            }
+        }
+    </style>
+</body>
+</html>
