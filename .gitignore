@@ -1,0 +1,24 @@
+# Dependency directories
+node_modules/
+
+# Expo files
+.expo/
+
+# Build output
+dist/
+web-build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System files
+.DS_Store
+
+# Environment variables
+.env*
+
+# Ignore local development state
+.local/
