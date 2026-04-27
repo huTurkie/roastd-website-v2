@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toast This Pic - Roastd</title>
+    <title>Roastd</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/png" href="../AppIcon_and_favicon.png">
-    <link rel="apple-touch-icon" href="../AppIcon_and_favicon.png">
+    <link rel="icon" type="image/png" href="../favicon.ico/favicon.png">
+    <link rel="apple-touch-icon" href="../favicon.ico/favicon.png">
     <style>
         * {
             margin: 0;
@@ -354,7 +354,7 @@
             }
             
             .logo-btn img {
-                height: clamp(45px, 7vw, 55px) !important;
+                height: clamp(56px, 9vw, 70px) !important;
             }
         }
 
@@ -383,7 +383,7 @@
 </head>
 <body>
     <button class="logo-btn" onclick="window.location.href='/'">
-        <img src="../New_Roastd_logo_white.png" alt="Roastd" style="height: clamp(45px, 6vw, 55px); width: auto; object-fit: contain;">
+        <img src="../website-logo/Header-logo.png" alt="Roastd" style="height: clamp(56px, 7vw, 70px); width: auto; object-fit: contain;">
     </button>
 
 
@@ -479,57 +479,102 @@
         const SUPABASE_URL = 'https://whvbxvllzrgjvurdivmh.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodmJ4dmxsenJnanZ1cmRpdm1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTY4MTAsImV4cCI6MjA3MjAzMjgxMH0.fzlUcI2xRxMI_6MEUpJ_RXQYMB7GgDGkCoFYzgmbr4k'; 
 
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SESSION_UNAVAILABLE_MESSAGE = 'User removed their pic or session expired, please create your own roasts!';
 
         let currentSessionId = null;
         let linkCode = null; // Make linkCode global so submit button can access it
+        let supabaseClient = null;
+
+        function showSessionUnavailable() {
+            const roastImage = document.getElementById('roast-image');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const toastHeading = document.getElementById('toast-heading');
+            const inputSection = document.querySelector('.input-section');
+
+            currentSessionId = null;
+
+            if (roastImage) {
+                roastImage.onerror = null;
+                roastImage.removeAttribute('src');
+                roastImage.style.display = 'none';
+            }
+
+            if (loadingSpinner) {
+                loadingSpinner.textContent = SESSION_UNAVAILABLE_MESSAGE;
+                loadingSpinner.style.display = 'flex';
+            }
+
+            if (toastHeading) {
+                toastHeading.textContent = 'Roastd';
+            }
+
+            if (inputSection) {
+                inputSection.style.display = 'none';
+            }
+        }
 
         // Fetch photo and session data on page load
         document.addEventListener('DOMContentLoaded', async () => {
             const roastImage = document.getElementById('roast-image');
             const loadingSpinner = document.getElementById('loading-spinner');
 
+            if (!window.supabase) {
+                showSessionUnavailable();
+                return;
+            }
+
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
             // Extract link code from URL query parameter (e.g., ...?code=CODE)
             const urlParams = new URLSearchParams(window.location.search);
             linkCode = urlParams.get('code'); // Assign to global variable
 
             if (!linkCode) {
-                loadingSpinner.textContent = 'Error: No link code provided in the URL.';
+                showSessionUnavailable();
                 return;
             }
 
-            // Fetch the roast session from Supabase
-            console.log('Fetching roast session with link code:', linkCode);
-            const { data, error } = await supabaseClient
-                .from('roast_sessions')
-                .select('session_id, original_photo_url, roast_prompt')
-                .eq('link_code', linkCode)
-                .order('created_at', { ascending: true })
-                .limit(1)
-                .maybeSingle();
+            try {
+                // Fetch the roast session from Supabase
+                console.log('Fetching roast session with link code:', linkCode);
+                const { data, error } = await supabaseClient
+                    .from('roast_sessions')
+                    .select('session_id, original_photo_url, roast_prompt')
+                    .eq('link_code', linkCode)
+                    .order('created_at', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
 
-            console.log('Supabase response:', { data, error });
-            console.log('Fetched data:', data);
+                console.log('Supabase response:', { data, error });
+                console.log('Fetched data:', data);
 
-            if (error || !data) {
-                console.error('Error fetching roast session:', error);
-                loadingSpinner.textContent = 'Error loading roast session.';
-                return;
+                if (error || !data || !data.session_id || !data.original_photo_url) {
+                    console.error('Error fetching roast session:', error);
+                    showSessionUnavailable();
+                    return;
+                }
+
+                roastImage.onload = () => {
+                    roastImage.style.display = 'block';
+                    loadingSpinner.style.display = 'none';
+                };
+
+                roastImage.onerror = showSessionUnavailable;
+
+                // Display the image and set the prompt
+                currentSessionId = data.session_id;
+                roastImage.src = data.original_photo_url;
+                
+                const toastHeading = document.getElementById('toast-heading');
+                console.log('Toast heading element:', toastHeading);
+                console.log('Setting heading to:', data.roast_prompt);
+                toastHeading.textContent = data.roast_prompt;
+                console.log('Heading updated to:', toastHeading.textContent);
+            } catch (error) {
+                console.error('Error loading roast session:', error);
+                showSessionUnavailable();
             }
-
-            // Display the image and set the prompt
-            currentSessionId = data.session_id;
-            roastImage.src = data.original_photo_url;
-            
-            const toastHeading = document.getElementById('toast-heading');
-            console.log('Toast heading element:', toastHeading);
-            console.log('Setting heading to:', data.roast_prompt);
-            toastHeading.textContent = data.roast_prompt;
-            console.log('Heading updated to:', toastHeading.textContent);
-
-            roastImage.style.display = 'block';
-            loadingSpinner.style.display = 'none';
         });
 
         // Handle roast submission
@@ -542,8 +587,9 @@
                 return;
             }
 
-            if (!currentSessionId) {
-                alert('Could not find the roast session. Please refresh the page.');
+            if (!currentSessionId || !supabaseClient) {
+                showSessionUnavailable();
+                alert(SESSION_UNAVAILABLE_MESSAGE);
                 return;
             }
 
